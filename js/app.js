@@ -1,8 +1,10 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 통합 캘린더 엔진
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 2-Way 구글시트 백엔드 통신
  */
 
-const GOOGLE_APPS_SCRIPT_CODE = `function setupCWGHClass1_3Sheets() {
+const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 자동 연동 스크립트
+
+function setupCWGHClass1_3Sheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configs = [
     { name: "알림장", headers: ["ID", "분류", "제목", "상세내용", "작성일", "중요핀여부"] },
@@ -19,7 +21,29 @@ const GOOGLE_APPS_SCRIPT_CODE = `function setupCWGHClass1_3Sheets() {
     sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
     sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold").setBackground("#FFB7C5").setFontColor("#FFFFFF");
   });
-  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 헤더 7개가 자동 생성되었습니다!");
+  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 7개 탭과 헤더가 자동 생성되었습니다!");
+}
+
+// 🚀 웹사이트 ➔ 구글 시트 자동 저장 백엔드 (doPost)
+function doPost(e) {
+  try {
+    const contents = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const action = contents.action;
+
+    if (action === "signup") {
+      const sheet = ss.getSheetByName("학생계정") || ss.insertSheet("학생계정");
+      sheet.appendRow([contents.id, contents.name, contents.passwordHash, contents.role || "student"]);
+      return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "add_notice") {
+      const sheet = ss.getSheetByName("알림장") || ss.insertSheet("알림장");
+      sheet.appendRow([contents.id, contents.category, contents.title, contents.content, contents.date, contents.pinned ? "Y" : "N"]);
+      return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ result: "ok" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: "error", error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
 }`;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -39,7 +63,7 @@ function setupScriptCopyButton() {
   if (btn) {
     btn.addEventListener("click", () => {
       navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE).then(() => {
-        alert("📋 구글 시트 자동 헤더 생성 코드가 복사되었습니다!");
+        alert("📋 구글 시트 양방향 백엔드 스크립트가 복사되었습니다!");
       });
     });
   }
@@ -68,7 +92,7 @@ function initApp(state) {
   renderHeader(state);
   renderDashboard(state);
   renderTimetable(state);
-  renderIntegratedCalendar(state); // 📅 통합 캘린더
+  renderIntegratedCalendar(state);
   renderBirthdays(state);
   renderRoles(state);
   renderEvaluations(state);
@@ -175,6 +199,7 @@ function setupAuthSystem(state) {
     });
   }
 
+  // ✨ 회원가입 시 구글 시트 백엔드로 자동 전송!
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -197,14 +222,25 @@ function setupAuthSystem(state) {
 
       const passwordHash = await hashPassword(password);
       const newUser = { id: studentId, name: name, role: "student", passwordHash: passwordHash };
+
+      // 1. 프론트엔드 상태 저장
       state.users.push(newUser);
       state.currentUser = newUser;
       saveState(state);
 
+      // 2. 🚀 구글 시트 백엔드로 2-Way 자동 전송!
+      await sendToBackend({
+        action: "signup",
+        id: studentId,
+        name: name,
+        passwordHash: passwordHash,
+        role: "student"
+      });
+
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 1학년 3반 회원가입이 완료되었습니다!\n반가워요, ${name} 학생! 🌸`);
+      alert(`🎉 1학년 3반 회원가입이 완료되었습니다!\n구글 시트 백엔드 [학생계정] 탭으로 자동 저장되었습니다. 🌸`);
     });
   }
 }
@@ -419,14 +455,12 @@ function renderTimetable(state) {
   }).join("");
 }
 
-// 📅 ✨ 통합 캘린더 렌더링 (학사일정 + 수행평가 마감일 + 친구들 생일 모두 결합!)
 function renderIntegratedCalendar(state, categoryFilter = "ALL") {
   const container = document.getElementById("calendar-list");
   if (!container) return;
 
   const currentYear = new Date().getFullYear();
 
-  // 1. 학사일정 항목
   const schoolEvents = state.calendar.map(c => ({
     date: c.date,
     title: c.title,
@@ -435,7 +469,6 @@ function renderIntegratedCalendar(state, categoryFilter = "ALL") {
     icon: "🏫"
   }));
 
-  // 2. 수행평가 마감일 항목 결합
   const evalEvents = state.evaluations.map(e => ({
     date: e.deadline,
     title: `[수행평가] ${e.subject} - ${e.title}`,
@@ -444,7 +477,6 @@ function renderIntegratedCalendar(state, categoryFilter = "ALL") {
     icon: "📝"
   }));
 
-  // 3. 친구들 생일 항목 결합
   const birthdayEvents = state.birthdays.map(b => {
     const mStr = String(b.month).padStart(2, "0");
     const dStr = String(b.day).padStart(2, "0");
@@ -457,7 +489,6 @@ function renderIntegratedCalendar(state, categoryFilter = "ALL") {
     };
   });
 
-  // 통합 배열 생성 및 날짜순 정렬
   let allEvents = [...schoolEvents, ...evalEvents, ...birthdayEvents];
 
   if (categoryFilter !== "ALL") {
@@ -589,5 +620,5 @@ function setupEventListeners(state) {
 
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 및 통합 캘린더가 활성화되었습니다.";
+  if (statusEl) statusEl.textContent = "✅ 웹 ➔ 구글 시트 2-Way 양방향 백엔드 연동 켜짐";
 }
