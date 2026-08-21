@@ -1,8 +1,8 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 2-Way 구글시트 백엔드 통신
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 학생/교사 회원가입 엔진
  */
 
-const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 자동 연동 스크립트
+const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
 
 function setupCWGHClass1_3Sheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -20,11 +20,11 @@ function setupCWGHClass1_3Sheets() {
     sheet.clear();
     sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
     sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold").setBackground("#FFB7C5").setFontColor("#FFFFFF");
+    sheet.getRange(1, 1, 1, cfg.headers.length).setHorizontalAlignment("center");
   });
-  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 7개 탭과 헤더가 자동 생성되었습니다!");
+  SpreadsheetApp.getUi().alert("🌸 창원여고 1-3반 알림판 7개 탭과 헤더가 자동으로 완벽 생성되었습니다!");
 }
 
-// 🚀 웹사이트 ➔ 구글 시트 자동 저장 백엔드 (doPost)
 function doPost(e) {
   try {
     const contents = JSON.parse(e.postData.contents);
@@ -40,7 +40,7 @@ function doPost(e) {
       sheet.appendRow([contents.id, contents.category, contents.title, contents.content, contents.date, contents.pinned ? "Y" : "N"]);
       return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
     }
-    return ContentService.createTextOutput(JSON.stringify({ result: "ok" })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ result: "error", error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -109,6 +109,9 @@ function setupAuthSystem(state) {
   const tabSignup = document.getElementById("tab-auth-signup");
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
+  const signupRoleSelect = document.getElementById("signup-role");
+  const adminCodeBox = document.getElementById("admin-code-box");
+
   const passwordInput = document.getElementById("login-password");
   const hashPreview = document.getElementById("hash-preview");
   const signupPasswordInput = document.getElementById("signup-password");
@@ -116,6 +119,16 @@ function setupAuthSystem(state) {
   const loginError = document.getElementById("login-error");
   const signupError = document.getElementById("signup-error");
   const userBadge = document.getElementById("user-badge");
+
+  if (signupRoleSelect && adminCodeBox) {
+    signupRoleSelect.addEventListener("change", (e) => {
+      if (e.target.value === "admin") {
+        adminCodeBox.classList.remove("hidden");
+      } else {
+        adminCodeBox.classList.add("hidden");
+      }
+    });
+  }
 
   if (tabLogin && tabSignup) {
     tabLogin.addEventListener("click", () => {
@@ -139,7 +152,7 @@ function setupAuthSystem(state) {
     if (state.currentUser) {
       const isRoleAdmin = state.currentUser.role === "admin";
       userBadge.innerHTML = `
-        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '관리자' : '학생'}) 
+        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '선생님/관리자' : '학생'}) 
         <span class="ml-1 text-[10px] bg-red-400 text-white px-1.5 py-0.5 rounded-md hover:bg-red-500" id="btn-logout">로그아웃</span>
       `;
     } else {
@@ -191,22 +204,25 @@ function setupAuthSystem(state) {
         updateUserBadge();
         modal.classList.add("hidden");
         loginForm.reset();
-        alert(`🌸 환영합니다, ${user.name} 학생! 1-3반 알림판에 로그인되었습니다.`);
+        alert(`🌸 환영합니다, ${user.name}님! 로그인되었습니다.`);
       } else {
-        loginError.textContent = "❌ 학번/아이디 또는 비밀번호가 일치하지 않습니다.";
+        loginError.textContent = "❌ 아이디 또는 비밀번호가 일치하지 않습니다.";
         loginError.classList.remove("hidden");
       }
     });
   }
 
-  // ✨ 회원가입 시 구글 시트 백엔드로 자동 전송!
+  // ✨ 학생 & 교사 회원가입 제출 처리
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       signupError.classList.add("hidden");
+
+      const role = signupRoleSelect.value;
       const studentId = document.getElementById("signup-studentid").value.trim();
       const name = document.getElementById("signup-name").value.trim();
       const password = signupPasswordInput.value;
+      const adminCode = document.getElementById("signup-admin-code").value.trim();
 
       if (!studentId || !name || !password) {
         signupError.textContent = "❌ 모든 항목을 작성해 주세요.";
@@ -214,33 +230,38 @@ function setupAuthSystem(state) {
         return;
       }
 
+      // 선생님/관리자 가입 코드 체크 (1033)
+      if (role === "admin" && adminCode !== "1033") {
+        signupError.textContent = "❌ 교사/관리자 인증 암호가 올바르지 않습니다. (기본: 1033)";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
       if (state.users.find(u => u.id === studentId)) {
-        signupError.textContent = "⚠️ 이미 가입된 학번입니다. 로그인 탭을 이용해 주세요.";
+        signupError.textContent = "⚠️ 이미 존재하 가입된 아이디/학번입니다.";
         signupError.classList.remove("hidden");
         return;
       }
 
       const passwordHash = await hashPassword(password);
-      const newUser = { id: studentId, name: name, role: "student", passwordHash: passwordHash };
+      const newUser = { id: studentId, name: name, role: role, passwordHash: passwordHash };
 
-      // 1. 프론트엔드 상태 저장
       state.users.push(newUser);
       state.currentUser = newUser;
       saveState(state);
 
-      // 2. 🚀 구글 시트 백엔드로 2-Way 자동 전송!
       await sendToBackend({
         action: "signup",
         id: studentId,
         name: name,
         passwordHash: passwordHash,
-        role: "student"
+        role: role
       });
 
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 1학년 3반 회원가입이 완료되었습니다!\n구글 시트 백엔드 [학생계정] 탭으로 자동 저장되었습니다. 🌸`);
+      alert(`🎉 ${role === 'admin' ? '선생님/관리자' : '학생'} 회원가입이 성공적으로 완료되었습니다!\n구글 시트 백엔드 [학생계정] 탭으로 자동 저장되었습니다. 🌸`);
     });
   }
 }
