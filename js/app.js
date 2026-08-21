@@ -1,24 +1,55 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 통합 캘린더 엔진
  */
+
+const GOOGLE_APPS_SCRIPT_CODE = `function setupCWGHClass1_3Sheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const configs = [
+    { name: "알림장", headers: ["ID", "분류", "제목", "상세내용", "작성일", "중요핀여부"] },
+    { name: "시간표", headers: ["교시", "시간", "월", "화", "수", "목", "금"] },
+    { name: "학사일정", headers: ["ID", "일자", "행사/일정명", "구분", "D-Day표시여부"] },
+    { name: "생일", headers: ["ID", "이름", "월", "일", "MBTI", "축하한마디"] },
+    { name: "1인1역할", headers: ["ID", "역할명", "담당자이름", "세부담당업무", "이모지아이콘"] },
+    { name: "수행평가", headers: ["ID", "과목", "수행평가제목", "제출기한", "상세설명"] },
+    { name: "학생계정", headers: ["학번/아이디", "이름", "비밀번호_SHA256해시", "권한"] }
+  ];
+  configs.forEach(cfg => {
+    let sheet = ss.getSheetByName(cfg.name) || ss.insertSheet(cfg.name);
+    sheet.clear();
+    sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
+    sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold").setBackground("#FFB7C5").setFontColor("#FFFFFF");
+  });
+  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 헤더 7개가 자동 생성되었습니다!");
+}`;
 
 document.addEventListener("DOMContentLoaded", () => {
   let appState = loadState();
   initApp(appState);
   startLiveClock();
   setupAuthSystem(appState);
+  setupScriptCopyButton();
 
   if (appState.googleSheetId) {
     syncWithGoogleSheet(appState.googleSheetId);
   }
 });
 
+function setupScriptCopyButton() {
+  const btn = document.getElementById("btn-copy-script");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE).then(() => {
+        alert("📋 구글 시트 자동 헤더 생성 코드가 복사되었습니다!");
+      });
+    });
+  }
+}
+
 function loadState() {
   const saved = localStorage.getItem("cwgh_1_3_state");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      // 오리지널 시간표 및 학사일정 업데이트 강제 동기화
       parsed.timetable = INITIAL_DATA.timetable;
       parsed.calendar = INITIAL_DATA.calendar;
       return parsed;
@@ -37,7 +68,7 @@ function initApp(state) {
   renderHeader(state);
   renderDashboard(state);
   renderTimetable(state);
-  renderCalendar(state);
+  renderIntegratedCalendar(state); // 📅 통합 캘린더
   renderBirthdays(state);
   renderRoles(state);
   renderEvaluations(state);
@@ -338,7 +369,6 @@ function renderDashboard(state) {
   }
 }
 
-// 🕒 시간표 렌더링 (사진 원본 100% 하드코딩 반영)
 function renderTimetable(state) {
   const tbody = document.getElementById("timetable-body");
   if (!tbody) return;
@@ -389,22 +419,67 @@ function renderTimetable(state) {
   }).join("");
 }
 
-// 📅 2학기 학사일정 렌더링
-function renderCalendar(state) {
+// 📅 ✨ 통합 캘린더 렌더링 (학사일정 + 수행평가 마감일 + 친구들 생일 모두 결합!)
+function renderIntegratedCalendar(state, categoryFilter = "ALL") {
   const container = document.getElementById("calendar-list");
   if (!container) return;
 
-  container.innerHTML = state.calendar.map(c => {
-    const ddayInfo = getDDayString(c.date);
+  const currentYear = new Date().getFullYear();
+
+  // 1. 학사일정 항목
+  const schoolEvents = state.calendar.map(c => ({
+    date: c.date,
+    title: c.title,
+    category: c.category,
+    badgeBg: "bg-pink-100 text-pink-700",
+    icon: "🏫"
+  }));
+
+  // 2. 수행평가 마감일 항목 결합
+  const evalEvents = state.evaluations.map(e => ({
+    date: e.deadline,
+    title: `[수행평가] ${e.subject} - ${e.title}`,
+    category: "수행평가",
+    badgeBg: "bg-purple-100 text-purple-700",
+    icon: "📝"
+  }));
+
+  // 3. 친구들 생일 항목 결합
+  const birthdayEvents = state.birthdays.map(b => {
+    const mStr = String(b.month).padStart(2, "0");
+    const dStr = String(b.day).padStart(2, "0");
+    return {
+      date: `${currentYear}-${mStr}-${dStr}`,
+      title: `🎂 ${b.name} 친구 생일 (MBTI: ${b.mbti})`,
+      category: "생일",
+      badgeBg: "bg-rose-100 text-rose-700 font-bold",
+      icon: "🎉"
+    };
+  });
+
+  // 통합 배열 생성 및 날짜순 정렬
+  let allEvents = [...schoolEvents, ...evalEvents, ...birthdayEvents];
+
+  if (categoryFilter !== "ALL") {
+    allEvents = allEvents.filter(e => e.category === categoryFilter);
+  }
+
+  allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  container.innerHTML = allEvents.map(item => {
+    const ddayInfo = getDDayString(item.date);
     return `
       <div class="flex items-center justify-between p-4 bg-white/80 rounded-2xl border border-pink-100 hover:border-pink-300 transition">
         <div class="flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-sm">
-            ${c.category.substring(0, 2)}
+          <span class="w-10 h-10 rounded-xl ${item.badgeBg} flex items-center justify-center font-bold text-base shadow-sm">
+            ${item.icon}
           </span>
           <div>
-            <span class="text-xs text-gray-400 font-mono">${c.date}</span>
-            <h4 class="font-bold text-gray-800 text-base">${c.title}</h4>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400 font-mono">${item.date}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeBg}">${item.category}</span>
+            </div>
+            <h4 class="font-bold text-gray-800 text-sm md:text-base mt-0.5">${item.title}</h4>
           </div>
         </div>
         <span class="px-3 py-1 text-xs font-bold rounded-full ${ddayInfo.class}">
@@ -514,5 +589,5 @@ function setupEventListeners(state) {
 
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 및 오리지널 시간표/학사일정 데이터가 완벽 결합되었습니다.";
+  if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 및 통합 캘린더가 활성화되었습니다.";
 }
