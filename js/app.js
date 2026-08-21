@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
+ * 창원여자고등학교 1학년 3반 인터랙티브 월별 캘린더 대시보드 & iPad 터치 웹 컨트롤러
  */
 
 const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
@@ -39,6 +39,10 @@ function doPost(e) {
       const sheet = ss.getSheetByName("알림장") || ss.insertSheet("알림장");
       sheet.appendRow([contents.id, contents.category, contents.title, contents.content, contents.date, contents.pinned ? "Y" : "N"]);
       return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "add_evaluation") {
+      const sheet = ss.getSheetByName("수행평가") || ss.insertSheet("수행평가");
+      sheet.appendRow([contents.id, contents.subject, contents.title, contents.deadline, contents.details]);
+      return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
     }
     return ContentService.createTextOutput(JSON.stringify({ result: "success" })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -46,12 +50,19 @@ function doPost(e) {
   }
 }`;
 
+// 현재 캘린더 네비게이션 상태 (기본 2026년 8월)
+let currentCalYear = 2026;
+let currentCalMonth = 8; // 1-indexed
+
 document.addEventListener("DOMContentLoaded", () => {
   let appState = loadState();
   initApp(appState);
   startLiveClock();
   setupAuthSystem(appState);
   setupScriptCopyButton();
+  setupInteractiveCalendarControls(appState);
+  setupAddEventModal(appState);
+  setupQuoteEditor(appState);
 
   if (appState.googleSheetId) {
     syncWithGoogleSheet(appState.googleSheetId);
@@ -90,15 +101,309 @@ function saveState(state) {
 
 function initApp(state) {
   renderHeader(state);
-  renderDashboard(state);
+  renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
+  renderDashboardNotices(state);
+  renderDashboardMeal();
   renderTimetable(state);
-  renderIntegratedCalendar(state);
   renderBirthdays(state);
   renderRoles(state);
   renderEvaluations(state);
 
   setupTabNavigation();
   setupEventListeners(state);
+}
+
+// 💬 오늘의 명언/한마디 수정
+function setupQuoteEditor(state) {
+  const btn = document.getElementById("btn-edit-quote");
+  const display = document.getElementById("quote-display");
+
+  if (btn && display) {
+    btn.addEventListener("click", () => {
+      if (!state.currentUser) {
+        alert("🔒 로그인 후 오늘의 한마디를 작성하실 수 있습니다!");
+        document.getElementById("login-modal").classList.remove("hidden");
+        return;
+      }
+      const newQuote = prompt("🌸 1학년 3반 친구들에게 전할 오늘의 한마디/명언을 적어주세요:", display.textContent.replace(/^"|"$/g, ''));
+      if (newQuote && newQuote.trim()) {
+        state.classInfo.motto = `"${newQuote.trim()}"`;
+        saveState(state);
+        display.textContent = state.classInfo.motto;
+        alert("✨ 오늘의 한마디가 업데이트되었습니다!");
+      }
+    });
+  }
+}
+
+// 📅 1. 인터랙티브 월별 캘린더 그리드 랜더러
+function renderMonthlyGridCalendar(state, year, month) {
+  const gridContainer = document.getElementById("calendar-grid");
+  const monthTitle = document.getElementById("calendar-month-title");
+  if (!gridContainer || !monthTitle) return;
+
+  monthTitle.textContent = `${year}년 ${month}월 🌸`;
+
+  // 해당 월의 1일 날짜 및 총 일수 계산
+  const firstDayIndex = new Date(year, month - 1, 1).getDay(); // 0: 일요일
+  const totalDays = new Date(year, month, 0).getDate();
+  const prevMonthTotalDays = new Date(year, month - 1, 0).getDate();
+
+  const today = new Date();
+  const isCurrentRealMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
+
+  // 전체 캘린더 이벤트 매핑
+  const eventsByDate = {};
+
+  // 학사일정
+  state.calendar.forEach(c => {
+    if (!eventsByDate[c.date]) eventsByDate[c.date] = [];
+    eventsByDate[c.date].push({
+      type: "school",
+      title: c.title,
+      category: c.category,
+      pillClass: c.category === "휴업일" ? "event-pill-holiday" : "event-pill-school"
+    });
+  });
+
+  // 수행평가
+  state.evaluations.forEach(e => {
+    if (!eventsByDate[e.deadline]) eventsByDate[e.deadline] = [];
+    eventsByDate[e.deadline].push({
+      type: "eval",
+      title: `📝 [${e.subject}] ${e.title}`,
+      category: "수행평가",
+      pillClass: "event-pill-eval"
+    });
+  });
+
+  // 친구 생일 (해당 월)
+  state.birthdays.forEach(b => {
+    const mStr = String(b.month).padStart(2, "0");
+    const dStr = String(b.day).padStart(2, "0");
+    const fullDate = `${year}-${mStr}-${dStr}`;
+
+    if (!eventsByDate[fullDate]) eventsByDate[fullDate] = [];
+    eventsByDate[fullDate].push({
+      type: "bday",
+      title: `🎂 ${b.name} 생일`,
+      category: "생일",
+      pillClass: "event-pill-bday"
+    });
+  });
+
+  let html = "";
+
+  // 1. 이전 달 빈 날짜
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const prevDay = prevMonthTotalDays - i;
+    html += `
+      <div class="calendar-day-cell opacity-40 bg-gray-50/50 cursor-default">
+        <span class="text-xs text-gray-400 font-semibold">${prevDay}</span>
+      </div>
+    `;
+  }
+
+  // 2. 현재 달 날짜 (1일 ~ totalDays)
+  for (let day = 1; day <= totalDays; day++) {
+    const mStr = String(month).padStart(2, "0");
+    const dStr = String(day).padStart(2, "0");
+    const dateStr = `${year}-${mStr}-${dStr}`;
+
+    const isToday = isCurrentRealMonth && today.getDate() === day;
+    const dayEvents = eventsByDate[dateStr] || [];
+
+    html += `
+      <div onclick="openDayDetailModal('${dateStr}')" class="calendar-day-cell ${isToday ? 'today' : ''}">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold ${isToday ? 'text-rose-600 font-extrabold text-sm' : 'text-gray-700'}">${day}</span>
+          ${isToday ? '<span class="text-[9px] bg-rose-500 text-white px-1.5 py-0.2 rounded-full font-bold">TODAY</span>' : ''}
+        </div>
+
+        <div class="space-y-0.5 overflow-hidden my-1">
+          ${dayEvents.slice(0, 3).map(ev => `
+            <div class="event-pill ${ev.pillClass}" title="${ev.title}">
+              ${ev.title}
+            </div>
+          `).join("")}
+          ${dayEvents.length > 3 ? `<div class="text-[9px] text-pink-500 font-bold font-mono pl-1">+${dayEvents.length - 3}개 더보기</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. 다음 달 빈 날짜 매꾸기
+  const totalRendered = firstDayIndex + totalDays;
+  const remainingCells = (42 - totalRendered) % 7;
+  for (let i = 1; i <= remainingCells; i++) {
+    html += `
+      <div class="calendar-day-cell opacity-40 bg-gray-50/50 cursor-default">
+        <span class="text-xs text-gray-400 font-semibold">${i}</span>
+      </div>
+    `;
+  }
+
+  gridContainer.innerHTML = html;
+}
+
+// 📅 캘린더 월 이동 컨트롤
+function setupInteractiveCalendarControls(state) {
+  const prevBtn = document.getElementById("btn-prev-month");
+  const nextBtn = document.getElementById("btn-next-month");
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      currentCalMonth--;
+      if (currentCalMonth < 1) {
+        currentCalMonth = 12;
+        currentCalYear--;
+      }
+      renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      currentCalMonth++;
+      if (currentCalMonth > 12) {
+        currentCalMonth = 1;
+        currentCalYear++;
+      }
+      renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
+    });
+  }
+}
+
+// 📱 2. 날짜 클릭 팝업 상세 모달 (Day Detail Popup Modal)
+window.openDayDetailModal = function(dateStr) {
+  const modal = document.getElementById("day-detail-modal");
+  const titleEl = document.getElementById("day-modal-date-title");
+  const listEl = document.getElementById("day-modal-event-list");
+  const addBtn = document.getElementById("btn-day-add-event");
+  const state = loadState();
+
+  if (!modal || !titleEl || !listEl) return;
+
+  const [y, m, d] = dateStr.split("-");
+  titleEl.textContent = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 상세 정보 🌸`;
+
+  // 이 날짜의 학사일정 + 수행평가 + 생일 필터링
+  const events = [];
+
+  state.calendar.filter(c => c.date === dateStr).forEach(c => {
+    events.push({ title: c.title, category: c.category, icon: "🏫", badgeClass: "bg-pink-100 text-pink-700" });
+  });
+
+  state.evaluations.filter(e => e.deadline === dateStr).forEach(e => {
+    events.push({ title: `[${e.subject}] ${e.title}`, category: "수행평가", icon: "📝", details: e.details, badgeClass: "bg-purple-100 text-purple-700" });
+  });
+
+  state.birthdays.filter(b => {
+    const mStr = String(b.month).padStart(2, "0");
+    const dStr = String(b.day).padStart(2, "0");
+    return `${y}-${mStr}-${dStr}` === dateStr;
+  }).forEach(b => {
+    events.push({ title: `🎉 ${b.name} 친구 생일 (MBTI: ${b.mbti})`, category: "생일", icon: "🎂", details: `한마디: "${b.wish}"`, badgeClass: "bg-rose-100 text-rose-700 font-bold" });
+  });
+
+  const ddayInfo = getDDayString(dateStr);
+
+  if (events.length === 0) {
+    listEl.innerHTML = `
+      <div class="p-6 text-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 text-xs">
+        🌸 이 날짜에는 등록된 특별한 일정이 없습니다.<br>아래 버튼을 눌러 새 일정을 직접 추가해보세요!
+      </div>
+    `;
+  } else {
+    listEl.innerHTML = events.map(item => `
+      <div class="p-3.5 bg-white rounded-2xl border border-pink-100 flex items-start justify-between gap-3 shadow-sm">
+        <div class="flex items-start gap-2.5">
+          <span class="text-xl p-1.5 bg-pink-50 rounded-xl">${item.icon}</span>
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeClass}">${item.category}</span>
+            <h4 class="font-bold text-gray-800 text-sm mt-1">${item.title}</h4>
+            ${item.details ? `<p class="text-xs text-gray-500 mt-0.5">${item.details}</p>` : ''}
+          </div>
+        </div>
+        <span class="px-2.5 py-0.5 text-xs font-bold rounded-full ${ddayInfo.class} shrink-0">
+          ${ddayInfo.text}
+        </span>
+      </div>
+    `).join("");
+  }
+
+  if (addBtn) {
+    addBtn.onclick = () => {
+      modal.classList.add("hidden");
+      openAddEventModal(dateStr);
+    };
+  }
+
+  modal.classList.remove("hidden");
+};
+
+// ✏️ 3. 새 일정/수행평가 웹 직접 등록 모달
+function openAddEventModal(defaultDate = "") {
+  const modal = document.getElementById("add-event-modal");
+  const dateInput = document.getElementById("event-date");
+  if (modal) {
+    if (dateInput && defaultDate) dateInput.value = defaultDate;
+    modal.classList.remove("hidden");
+  }
+}
+
+function setupAddEventModal(state) {
+  const modal = document.getElementById("add-event-modal");
+  const openBtn = document.getElementById("btn-open-add-event");
+  const closeBtn = document.getElementById("btn-close-add-modal");
+  const dayModalClose = document.getElementById("btn-close-day-modal");
+  const dayModal = document.getElementById("day-detail-modal");
+
+  const form = document.getElementById("add-event-form");
+
+  if (openBtn) openBtn.addEventListener("click", () => openAddEventModal());
+  if (closeBtn) closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
+  if (dayModalClose) dayModalClose.addEventListener("click", () => dayModal.classList.add("hidden"));
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const type = document.getElementById("event-type").value;
+      const date = document.getElementById("event-date").value;
+      const title = document.getElementById("event-title").value.trim();
+      const details = document.getElementById("event-details").value.trim();
+
+      if (!date || !title) {
+        alert("❌ 날짜와 제목을 입력해주세요!");
+        return;
+      }
+
+      if (type === "notice") {
+        const newNotice = { id: `n-${Date.now()}`, title: title, content: details || "학급 공지사항입니다.", date: date, category: "안내", pinned: false };
+        state.notices.unshift(newNotice);
+        await sendToBackend({ action: "add_notice", ...newNotice });
+      } else if (type === "eval") {
+        const newEval = { id: `ev-${Date.now()}`, subject: "학급", title: title, deadline: date, details: details || "수행평가 마감일" };
+        state.evaluations.push(newEval);
+        await sendToBackend({ action: "add_evaluation", ...newEval });
+      } else if (type === "calendar") {
+        state.calendar.push({ id: `c-${Date.now()}`, date: date, title: title, category: "학사일정", dday: true });
+      } else if (type === "bday") {
+        const [y, m, d] = date.split("-").map(Number);
+        state.birthdays.push({ id: `b-${Date.now()}`, name: title, month: m, day: d, mbti: "1-3반", wish: details || "생일 축하해!" });
+      }
+
+      saveState(state);
+      renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
+      renderDashboardNotices(state);
+      renderEvaluations(state);
+      renderBirthdays(state);
+
+      modal.classList.add("hidden");
+      form.reset();
+      alert("✨ 새 일정이 웹사이트 및 구글 시트에 성공적으로 등록되었습니다! 🌸");
+    });
+  }
 }
 
 function setupAuthSystem(state) {
@@ -120,7 +425,6 @@ function setupAuthSystem(state) {
 
   const adminTabBtn = document.getElementById("admin-tab-btn");
   const adminSheetLink = document.getElementById("admin-sheet-link");
-  const addNoticeBtn = document.getElementById("btn-add-notice");
 
   if (signupRoleSelect && adminCodeBox) {
     signupRoleSelect.addEventListener("change", (e) => {
@@ -161,17 +465,14 @@ function setupAuthSystem(state) {
       if (isRoleAdmin) {
         if (adminTabBtn) adminTabBtn.classList.remove("hidden");
         if (adminSheetLink) adminSheetLink.classList.remove("hidden");
-        if (addNoticeBtn) addNoticeBtn.classList.remove("hidden");
       } else {
         if (adminTabBtn) adminTabBtn.classList.add("hidden");
         if (adminSheetLink) adminSheetLink.classList.add("hidden");
-        if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
       }
     } else {
       userBadge.textContent = "🔑 로그인 / ✨ 회원가입";
       if (adminTabBtn) adminTabBtn.classList.add("hidden");
       if (adminSheetLink) adminSheetLink.classList.add("hidden");
-      if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
     }
   }
 
@@ -365,7 +666,7 @@ function renderHeader(state) {
   if (mottoEl) mottoEl.textContent = state.classInfo.motto;
 }
 
-function renderDashboard(state) {
+function renderDashboardNotices(state) {
   const noticeContainer = document.getElementById("dashboard-notices");
   if (noticeContainer) {
     noticeContainer.innerHTML = state.notices.map(n => `
@@ -381,28 +682,9 @@ function renderDashboard(state) {
       </div>
     `).join("");
   }
+}
 
-  const ddayContainer = document.getElementById("dashboard-ddays");
-  if (ddayContainer) {
-    const upcomingEvents = state.calendar
-      .filter(c => c.dday)
-      .map(c => ({ ...c, ddayObj: getDDayString(c.date) }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(0, 4);
-
-    ddayContainer.innerHTML = upcomingEvents.map(e => `
-      <div class="flex items-center justify-between p-3 bg-white/70 rounded-xl border border-pink-100">
-        <div>
-          <span class="text-xs text-gray-400 font-mono block">${e.date}</span>
-          <span class="font-bold text-gray-800 text-sm">${e.title}</span>
-        </div>
-        <span class="px-3 py-1 text-xs font-bold rounded-full ${e.ddayObj.class}">
-          ${e.ddayObj.text}
-        </span>
-      </div>
-    `).join("");
-  }
-
+function renderDashboardMeal() {
   const mealContainer = document.getElementById("dashboard-meal");
   if (mealContainer) {
     const todayStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
@@ -473,72 +755,6 @@ function renderTimetable(state) {
           `;
         }).join("")}
       </tr>
-    `;
-  }).join("");
-}
-
-function renderIntegratedCalendar(state, categoryFilter = "ALL") {
-  const container = document.getElementById("calendar-list");
-  if (!container) return;
-
-  const currentYear = new Date().getFullYear();
-
-  const schoolEvents = state.calendar.map(c => ({
-    date: c.date,
-    title: c.title,
-    category: c.category,
-    badgeBg: "bg-pink-100 text-pink-700",
-    icon: "🏫"
-  }));
-
-  const evalEvents = state.evaluations.map(e => ({
-    date: e.deadline,
-    title: `[수행평가] ${e.subject} - ${e.title}`,
-    category: "수행평가",
-    badgeBg: "bg-purple-100 text-purple-700",
-    icon: "📝"
-  }));
-
-  const birthdayEvents = state.birthdays.map(b => {
-    const mStr = String(b.month).padStart(2, "0");
-    const dStr = String(b.day).padStart(2, "0");
-    return {
-      date: `${currentYear}-${mStr}-${dStr}`,
-      title: `🎂 ${b.name} 친구 생일 (MBTI: ${b.mbti})`,
-      category: "생일",
-      badgeBg: "bg-rose-100 text-rose-700 font-bold",
-      icon: "🎉"
-    };
-  });
-
-  let allEvents = [...schoolEvents, ...evalEvents, ...birthdayEvents];
-
-  if (categoryFilter !== "ALL") {
-    allEvents = allEvents.filter(e => e.category === categoryFilter);
-  }
-
-  allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  container.innerHTML = allEvents.map(item => {
-    const ddayInfo = getDDayString(item.date);
-    return `
-      <div class="flex items-center justify-between p-4 bg-white/80 rounded-2xl border border-pink-100 hover:border-pink-300 transition">
-        <div class="flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl ${item.badgeBg} flex items-center justify-center font-bold text-base shadow-sm">
-            ${item.icon}
-          </span>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-400 font-mono">${item.date}</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeBg}">${item.category}</span>
-            </div>
-            <h4 class="font-bold text-gray-800 text-sm md:text-base mt-0.5">${item.title}</h4>
-          </div>
-        </div>
-        <span class="px-3 py-1 text-xs font-bold rounded-full ${ddayInfo.class}">
-          ${ddayInfo.text}
-        </span>
-      </div>
     `;
   }).join("");
 }
