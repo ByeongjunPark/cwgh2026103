@@ -44,12 +44,6 @@
           📚 리로스쿨
         </a>
         
-        <!-- 담임 선생님만 보이는 비밀 구글 시트 링크 -->
-        <a id="admin-sheet-link" href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
-           class="hidden px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1">
-          📊 선생님 전용 시트 백엔드 🔒
-        </a>
-        
         <!-- Login / Sign-up Button -->
         <button id="btn-login-modal" class="px-3.5 py-2 rounded-2xl btn-purple text-xs flex items-center gap-1 shadow-sm font-bold">
           <span id="user-badge">🔑 로그인 / ✨ 회원가입</span>
@@ -64,7 +58,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full bg-pink-400 animate-ping"></span>
-        <span>아이패드/태블릿 터치 웹 최적화 📱</span>
+        <span>아이패드/태블릿 터치 최적화 📱</span>
       </div>
     </div>
   </header>
@@ -89,7 +83,7 @@
       </button>
       <!-- 선생님 전용 관리 탭 (선생님 로그인 시에만 노출) -->
       <button id="admin-tab-btn" data-tab="settings" class="hidden tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-purple-700 bg-purple-50 flex items-center justify-center gap-1">
-        👑 선생님 전용 관리 🔒
+        👑 학급 관리 🔒
       </button>
     </div>
   </nav>
@@ -149,13 +143,13 @@
           <div class="text-blue-500">토</div>
         </div>
 
-        <!-- 월별 그리드 셀 (35~42개 날짜) -->
+        <!-- 월별 그리드 셀 -->
         <div id="calendar-grid" class="calendar-grid">
           <!-- Rendered by app.js -->
         </div>
 
         <p class="text-center text-xs text-gray-400 pt-2">
-          💡 날짜를 손가락(아이패드/태블릿)으로 누르시면 해당 날짜의 팝업 상세 정보가 나타납니다!
+          💡 날짜를 손가락으로 누르시면 해당 날짜의 팝업 상세 정보가 나타납니다!
         </p>
       </div>
 
@@ -275,43 +269,21 @@
     <!-- TAB 7: 👑 담임 선생님 전용 관리 탭 -->
     <section id="tab-settings" class="tab-content hidden space-y-6">
       
-      <!-- 구글 시트 보안 연결 박스 (선생님 전용) -->
       <div class="glass-panel p-6 rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 space-y-4">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="font-jua text-2xl text-emerald-900 flex items-center gap-2">
-              🔒 담임 선생님 전용 구글 시트 백엔드 관리
+              👑 1학년 3반 학급 관리
             </h3>
             <p class="text-xs text-emerald-700 mt-0.5">
-              이 영역은 담임 선생님(박병준 선생님)만 접속하실 수 있는 보안 영역입니다.
+              박병준 담임선생님 전용 관리 공간입니다.
             </p>
           </div>
-          <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
-             class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition shadow-md">
-            📊 선생님 구글 시트 열기 ↗
-          </a>
         </div>
 
         <div class="w-full h-[550px] rounded-2xl overflow-hidden border border-emerald-200 bg-white shadow-inner">
           <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQQcpbm9qzIXY30tq6_0ukEGKxaPqE4KGS8hOygOjkRIKvJwMzFSL4XdK5wauHJRfmvKjJbxYUmaDZr/pubhtml?widget=true&amp;headers=false"
                   class="w-full h-full border-0"></iframe>
-        </div>
-      </div>
-
-      <!-- 구글 시트 헤더 1초 자동 생성기 (Google Apps Script) -->
-      <div class="glass-panel p-6 rounded-3xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="font-jua text-2xl text-purple-900 flex items-center gap-2">
-              ⚡ 구글 시트 2-Way 백엔드 자동 생성기 (Apps Script)
-            </h3>
-            <p class="text-xs text-purple-700 mt-0.5">
-              웹에서 회원가입 및 알림장 등록 시 구글 시트로 자동 전송되는 스크립트입니다.
-            </p>
-          </div>
-          <button id="btn-copy-script" class="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700 transition shadow-md">
-            📋 자동 생성 스크립트 복사
-          </button>
         </div>
       </div>
 
@@ -385,7 +357,7 @@
         </div>
 
         <button type="submit" class="w-full py-2.5 rounded-xl btn-purple text-xs font-bold shadow-md">
-          ✨ 웹 ➔ 구글 시트 백엔드로 저장하기
+          ✨ 새 항목 등록하기
         </button>
       </form>
     </div>
@@ -428,7 +400,7 @@
         </button>
       </form>
 
-      <!-- FORM 2: 회원가입 (담임선생님 단 1명 가입 제한 적용) -->
+      <!-- FORM 2: 회원가입 -->
       <form id="signup-form" class="space-y-3 hidden">
         <div>
           <label class="text-xs font-bold text-gray-700 block mb-1">회원 구분</label>
