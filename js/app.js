@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 (나이스 NEIS 중식/석식 2-Way 연동 & 깔끔 정돈)
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 (로그인 & 회원가입 백엔드 연동 복구)
  */
 
 const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 양방향 자동 연동 스크립트
@@ -54,8 +54,6 @@ let currentCalYear = 2026;
 let currentCalMonth = 8;
 
 document.addEventListener("DOMContentLoaded", () => {
-  localStorage.removeItem("cwgh_1_3_state");
-
   let appState = loadState();
   initApp(appState);
   startLiveClock();
@@ -88,6 +86,7 @@ function loadState() {
       const parsed = JSON.parse(saved);
       parsed.timetable = INITIAL_DATA.timetable;
       parsed.calendar = INITIAL_DATA.calendar;
+      if (!parsed.users) parsed.users = [];
       return parsed;
     } catch (e) {
       console.error("State parse error:", e);
@@ -104,7 +103,7 @@ function initApp(state) {
   renderHeader(state);
   renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
   renderDashboardNotices(state);
-  fetchRealNeisMeal(); // 나이스 교육청 실시간 중식/석식 연동!
+  fetchRealNeisMeal(); // 나이스 교육청 실시간 중식/석식 연동
   renderTimetable(state);
   renderBirthdays(state);
   renderRoles(state);
@@ -114,17 +113,15 @@ function initApp(state) {
   setupEventListeners(state);
 }
 
-// 🍱 메뉴 이름 깔끔 정돈 (알레르기 숫자 및 빈 괄호 () 완전 제거 정제 함수)
 function cleanDishName(dish) {
   if (!dish) return "";
   return dish
-    .replace(/\s*\([0-9.\s]*\)/g, "")  // (5.8.9.18) 또는 () 제거
-    .replace(/\*/g, "")                // * 제거
-    .replace(/\s*\(\s*\)/g, "")        // 남은 빈 () 제거
+    .replace(/\s*\([0-9.\s]*\)/g, "")
+    .replace(/\*/g, "")
+    .replace(/\s*\(\s*\)/g, "")
     .trim();
 }
 
-// 🍱 나이스(NEIS) 교육청 오픈 API: 창원여자고등학교 실시간 [중식(점심) & 석식(저녁)] 연동
 async function fetchRealNeisMeal() {
   const mealContainer = document.getElementById("dashboard-meal");
   if (!mealContainer) return;
@@ -139,7 +136,6 @@ async function fetchRealNeisMeal() {
   const todayStr = `${today.getMonth() + 1}월 ${today.getDate()}일 (${dayOfWeek})`;
 
   try {
-    // 경상남도교육청 (S10), 창원여자고등학교 (9010070) NEIS API
     const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&ATPT_OFCDC_SC_CODE=S10&SD_SCHUL_CODE=9010070&MLSV_YMD=${ymd}`;
     const res = await fetch(url);
     const data = await res.json();
@@ -149,8 +145,8 @@ async function fetchRealNeisMeal() {
 
     if (data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row) {
       const rows = data.mealServiceDietInfo[1].row;
-      lunchRow = rows.find(r => r.MMEAL_SC_CODE === "2");  // 2: 중식(점심)
-      dinnerRow = rows.find(r => r.MMEAL_SC_CODE === "3"); // 3: 석식(저녁)
+      lunchRow = rows.find(r => r.MMEAL_SC_CODE === "2");
+      dinnerRow = rows.find(r => r.MMEAL_SC_CODE === "3");
     }
 
     if (lunchRow || dinnerRow) {
@@ -171,7 +167,6 @@ async function fetchRealNeisMeal() {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       `;
 
-      // ☀️ 중식 (점심)
       if (lunchRow) {
         const dishes = lunchRow.DDISH_NM
           .split("<br/>")
@@ -201,7 +196,6 @@ async function fetchRealNeisMeal() {
         `;
       }
 
-      // 🌙 석식 (저녁)
       if (dinnerRow) {
         const dishes = dinnerRow.DDISH_NM
           .split("<br/>")
@@ -243,7 +237,6 @@ async function fetchRealNeisMeal() {
     console.warn("NEIS Meal API Error:", e);
   }
 
-  // 주말 또는 급식이 전혀 없는 날
   mealContainer.innerHTML = `
     <div class="glass-panel p-5 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-center">
       <div class="flex items-center justify-between mb-2">
@@ -536,6 +529,7 @@ function setupAddEventModal(state) {
   }
 }
 
+// 🔐 인증 & 로그인 / 회원가입 시스템 (100% 동기화 연동)
 function setupAuthSystem(state) {
   const modal = document.getElementById("login-modal");
   const modalBtn = document.getElementById("btn-login-modal");
@@ -612,14 +606,26 @@ function setupAuthSystem(state) {
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
   }
 
+  // 🔑 로그인 서브밋 처리
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       loginError.classList.add("hidden");
-      const username = document.getElementById("login-username").value.trim();
-      const password = passwordInput.value;
+
+      const usernameInput = document.getElementById("login-username");
+      const username = usernameInput ? usernameInput.value.trim() : "";
+      const password = passwordInput ? passwordInput.value.trim() : "";
+
+      if (!username || !password) {
+        loginError.textContent = "❌ 아이디와 비밀번호를 모두 입력해 주세요.";
+        loginError.classList.remove("hidden");
+        return;
+      }
+
       const inputHash = await hashPassword(password);
-      const user = state.users.find(u => u.id === username && u.passwordHash === inputHash);
+      
+      // 사용자 찾기 (대소문자 구분 없음)
+      const user = state.users.find(u => u.id.toLowerCase() === username.toLowerCase() && u.passwordHash === inputHash);
 
       if (user) {
         state.currentUser = user;
@@ -627,23 +633,27 @@ function setupAuthSystem(state) {
         updateUserBadge();
         modal.classList.add("hidden");
         loginForm.reset();
-        alert(`🌸 환영합니다, ${user.name}님! 로그인되었습니다.`);
+        alert(`🌸 환영합니다, ${user.name}님! 성공적으로 로그인되었습니다.`);
       } else {
-        loginError.textContent = "❌ 아이디 또는 비밀번호가 일치하지 않습니다.";
+        loginError.textContent = "❌ 아이디 또는 비밀번호가 일치하지 않습니다. (회원가입 여부를 확인해 주세요)";
         loginError.classList.remove("hidden");
       }
     });
   }
 
+  // ✨ 회원가입 서브밋 처리
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       signupError.classList.add("hidden");
 
       const role = signupRoleSelect.value;
-      const studentId = document.getElementById("signup-studentid").value.trim();
-      const name = document.getElementById("signup-name").value.trim();
-      const password = signupPasswordInput.value;
+      const studentIdInput = document.getElementById("signup-studentid");
+      const nameInput = document.getElementById("signup-name");
+
+      const studentId = studentIdInput ? studentIdInput.value.trim() : "";
+      const name = nameInput ? nameInput.value.trim() : "";
+      const password = signupPasswordInput ? signupPasswordInput.value.trim() : "";
 
       if (!studentId || !name || !password) {
         signupError.textContent = "❌ 모든 항목을 작성해 주세요.";
@@ -660,8 +670,8 @@ function setupAuthSystem(state) {
         }
       }
 
-      if (state.users.find(u => u.id === studentId)) {
-        signupError.textContent = "⚠️ 이미 존재하거나 가입된 아이디입니다.";
+      if (state.users.find(u => u.id.toLowerCase() === studentId.toLowerCase())) {
+        signupError.textContent = "⚠️ 이미 가입된 아이디/학번입니다. 로그인해 주세요!";
         signupError.classList.remove("hidden");
         return;
       }
@@ -669,10 +679,12 @@ function setupAuthSystem(state) {
       const passwordHash = await hashPassword(password);
       const newUser = { id: studentId, name: name, role: role, passwordHash: passwordHash };
 
+      // 계정 등록 및 세션 저장
       state.users.push(newUser);
       state.currentUser = newUser;
       saveState(state);
 
+      // 구글 시트로 백엔드 전송
       await sendToBackend({
         action: "signup",
         id: studentId,
@@ -684,7 +696,7 @@ function setupAuthSystem(state) {
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 ${role === 'admin' ? '담임선생님' : '학생'} 회원가입이 성공적으로 완료되었습니다! 🌸`);
+      alert(`🎉 ${role === 'admin' ? '담임선생님' : '학생'} 회원가입이 완료되었습니다!\n이제 언제든지 설정하신 아이디/비밀번호로 로그인하실 수 있습니다. 🌸`);
     });
   }
 }
@@ -755,7 +767,7 @@ function highlightCurrentPeriod(now) {
       const startMin = startH * 60 + startM;
       const endMin = endH * 60 + endM;
 
-      const cellId = `cell-${dIdx + 1}-${p.period}`;
+      const cellId = `cell-${currentDayIndex}-${p.period}`;
       const el = document.getElementById(cellId);
       if (el) {
         if (currentMinutes >= startMin && currentMinutes <= endMin) {

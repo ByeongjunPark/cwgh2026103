@@ -8,20 +8,22 @@ const PUBLISHED_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ
 // Google Apps Script WebApp Backend URL
 let GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx_cwgh103_placeholder/exec";
 
+// SHA-256 해시 함수
 async function hashPassword(plainText) {
   if (!plainText) return "";
+  const cleanText = plainText.trim();
   const encoder = new TextEncoder();
-  const data = encoder.encode(plainText);
+  const data = encoder.encode(cleanText);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// 구글 시트 백엔드로 데이터 전송
+// 구글 시트 백엔드로 데이터 전송 (회원가입, 공지사항, 수행평가 등록)
 async function sendToBackend(payload) {
   try {
     if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes("placeholder")) {
-      console.log("[백엔드 통신] 저장 데이터:", payload);
+      console.log("[백엔드 시뮬레이션 데이터 저장]:", payload);
       return { result: "success" };
     }
     await fetch(GAS_WEBAPP_URL, {
@@ -37,7 +39,7 @@ async function sendToBackend(payload) {
   }
 }
 
-// 🧹 더미 데이터 100% 제거된 깨끗한 데이터 세트
+// 기본 데이터 세트
 const INITIAL_DATA = {
   classInfo: {
     schoolName: "창원여자고등학교",
@@ -49,15 +51,10 @@ const INITIAL_DATA = {
       riroschool: "https://cwyeoh.riroschool.kr/home.php"
     }
   },
-  // 더미 계정 0개 (선생님 및 학생 직접 회원가입)
   users: [],
-  // 더미 공지사항 0개
   notices: [],
-  // 더미 수행평가 0개
   evaluations: [],
-  // 더미 생일 0개
   birthdays: [],
-  // 더미 1인1역할 0개
   roles: [],
 
   // 공식 학사일정 (2026년 2학기)
@@ -83,7 +80,7 @@ const INITIAL_DATA = {
     { id: "c-19", date: "2027-02-05", title: "학년말 종업식 (1, 2학년)", category: "학사일정", dday: true }
   ],
 
-  // 1-3반 정규 주간 시간표 (교사명 하드코딩)
+  // 시간표
   timetable: {
     periodTimes: [
       { period: 1, start: "08:40", end: "09:30" },
