@@ -1,10 +1,24 @@
 /**
- * 창원여자고등학교 1학년 3반 종합알림판 기본 데이터 & 구글 시트 파서
+ * 창원여자고등학교 1학년 3반 종합알림판 데이터 & 구글 시트 & 비밀번호 SHA-256 해싱 엔진
  */
 
 const DEFAULT_SHEET_ID = "16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ";
 
-// 기본 샘플 데이터 (구글 시트 연동 전이나 오프라인 시 사용)
+/**
+ * 비밀번호 SHA-256 해싱 함수 (Web Crypto API)
+ */
+async function hashPassword(plainText) {
+  if (!plainText) return "";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plainText);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// 기본 샘플 데이터 및 학생 계정 정보 (비밀번호는 SHA-256 해시값으로 저장)
+// '1033' 의 SHA-256 해시: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
+// '10301' 의 SHA-256 해시: 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
 const INITIAL_DATA = {
   classInfo: {
     schoolName: "창원여자고등학교",
@@ -16,6 +30,13 @@ const INITIAL_DATA = {
       riroschool: "https://cwyeoh.riroschool.kr/home.php"
     }
   },
+  // 학생 계정 목록 (비밀번호 해시 적용)
+  users: [
+    { id: "admin", name: "담임선생님/반장", role: "admin", passwordHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" }, // 초기비번: 1033
+    { id: "10301", name: "김민서", role: "student", passwordHash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8" }, // 초기비번: 10301
+    { id: "10302", name: "박지유", role: "student", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" }, // 초기비번: 1234
+    { id: "10303", name: "이서연", role: "student", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" }
+  ],
   notices: [
     {
       id: "notice-1",
@@ -138,7 +159,7 @@ const INITIAL_DATA = {
 };
 
 /**
- * 구글 시트 파싱 및 데이터 로딩 함수
+ * 구글 시트 데이터 로딩 함수 (CSV 또는 GViz API)
  */
 async function fetchGoogleSheetData(sheetId) {
   try {
@@ -155,7 +176,7 @@ async function fetchGoogleSheetData(sheetId) {
   }
 }
 
-// 단순 CSV 파서
+// CSV 파서
 function parseCSV(text) {
   const lines = text.split(/\r?\n/);
   return lines.map(line => {

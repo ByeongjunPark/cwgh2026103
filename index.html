@@ -17,7 +17,7 @@
 </head>
 <body class="p-3 md:p-6 max-w-7xl mx-auto min-h-screen flex flex-col justify-between">
 
-  <!-- 🌸 Top Bar: Quick Links & Live Clock -->
+  <!-- 🌸 Top Bar: Quick Links, Login Badge & Live Clock -->
   <header class="mb-6">
     <div class="glass-panel p-4 rounded-3xl mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- Quick Link Buttons -->
+      <!-- Quick Link Buttons & Login Status -->
       <div class="flex flex-wrap items-center gap-2">
         <a href="https://cwyeo-h.gne.go.kr" target="_blank" rel="noopener noreferrer" 
            class="px-3 py-1.5 rounded-xl bg-white border border-pink-200 text-xs font-semibold text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition flex items-center gap-1">
@@ -45,8 +45,13 @@
         </a>
         <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
            class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1">
-          📊 구글 시트 편집
+          📊 구글 시트
         </a>
+        
+        <!-- Login Button / Status Badge -->
+        <button id="btn-login-modal" class="px-3 py-1.5 rounded-xl btn-purple text-xs flex items-center gap-1 shadow-sm">
+          <span id="user-badge">🔑 로그인 (SHA-256)</span>
+        </button>
       </div>
     </div>
 
@@ -57,7 +62,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-        <span>실시간 알림 온디맨드 연동 중</span>
+        <span>SHA-256 비밀번호 해싱 보안 작동 중</span>
       </div>
     </div>
   </header>
@@ -84,7 +89,7 @@
         📝 수행평가 알림
       </button>
       <button data-tab="settings" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
-        ⚙️ 설정/동기화
+        ⚙️ 구글시트/관리
       </button>
     </div>
   </nav>
@@ -105,7 +110,9 @@
               <h3 class="font-jua text-xl text-gray-800 flex items-center gap-2">
                 📌 알림장 & 주요 학급 공지
               </h3>
-              <span class="text-xs bg-pink-100 text-pink-600 font-bold px-2.5 py-1 rounded-full">최신 업데이트</span>
+              <button id="btn-add-notice" class="hidden text-xs bg-pink-500 text-white font-bold px-2.5 py-1 rounded-xl hover:bg-pink-600 transition">
+                + 새 공지 작성
+              </button>
             </div>
             <div id="dashboard-notices" class="space-y-3">
               <!-- Rendered by app.js -->
@@ -266,57 +273,125 @@
       </div>
     </section>
 
-    <!-- TAB 7: 설정 및 동기화 -->
-    <section id="tab-settings" class="tab-content hidden space-y-4">
-      <div class="glass-panel p-6 rounded-3xl max-w-2xl mx-auto space-y-6">
+    <!-- TAB 7: 구글시트 및 관리 -->
+    <section id="tab-settings" class="tab-content hidden space-y-6">
+      
+      <!-- Google Sheet Header Configuration Guide -->
+      <div class="glass-panel p-6 rounded-3xl space-y-4">
         <div>
           <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
-            ⚙️ 데이터 연동 & 구글 시트 관리
+            📊 구글 시트 데이터 헤더 구성 가이드
           </h3>
-          <p class="text-xs text-gray-500 mt-1">선생님과 반장 학생이 구글 시트에서 알림장과 일정을 쉽게 수정할 수 있습니다.</p>
-        </div>
-
-        <!-- Google Sheet Link Box -->
-        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-emerald-900 text-sm">📊 1-3반 전용 구글 시트</span>
-            <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
-               class="px-3 py-1 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition">
-              구글 시트 바로가기 ↗
-            </a>
-          </div>
-          <p class="text-xs text-emerald-700">
-            구글 시트에서 시간표, 알림장, 생일, 수행평가를 수정하신 후 구글 시트를 [웹에 게시] 또는 [링크가 있는 모든 사용자-뷰어]로 설정해 주시면 자동으로 본 웹사이트에 반영됩니다!
+          <p class="text-xs text-gray-500 mt-1">
+            선생님과 반장 학생이 구글 시트(<a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" class="text-pink-600 underline font-bold">1-3반 시트 바로가기</a>)에서 데이터를 작성하실 때 첫 번째 줄(Header)에 아래와 같이 칼럼을 작성하시면 웹 알림판에 완벽히 연동됩니다!
           </p>
         </div>
 
-        <!-- Sheet ID Input & Sync Button -->
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-gray-700">구글 시트 Document ID</label>
-          <div class="flex gap-2">
-            <input type="text" id="google-sheet-id" class="flex-1 px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-pink-300 focus:outline-none">
-            <button id="btn-sync-sheet" class="px-4 py-2 rounded-xl btn-pink text-xs font-bold">
-              🔄 지금 동기화
-            </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <!-- Sheet 1: 알림장 -->
+          <div class="p-3 bg-pink-50/70 rounded-2xl border border-pink-200">
+            <span class="font-bold text-pink-700 block mb-1">📌 [알림장] 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 분류 | C: 제목 | D: 상세내용 | E: 작성일 | F: 중요핀여부</code>
           </div>
-          <p id="sheet-sync-status" class="text-xs text-pink-600 font-semibold"></p>
-        </div>
 
-        <!-- Info Notice -->
-        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-600 space-y-1">
-          <p class="font-bold text-gray-800">💡 로그인 없는 편리한 알림판 가이드</p>
-          <p>• 학생들은 번거로운 로그인 과정 없이 URL 접속만으로 최신 정보를 한눈에 볼 수 있습니다.</p>
-          <p>• 인터넷 연결이 끊겨도 기본 데이터와 브라우저 내장 저장소(LocalStorage)를 통해 안전하게 유지됩니다.</p>
+          <!-- Sheet 2: 학사일정 -->
+          <div class="p-3 bg-purple-50/70 rounded-2xl border border-purple-200">
+            <span class="font-bold text-purple-700 block mb-1">📅 [학사일정] 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 일자 | C: 행사/일정명 | D: 구분 | E: D-Day표시여부</code>
+          </div>
+
+          <!-- Sheet 3: 수행평가 -->
+          <div class="p-3 bg-blue-50/70 rounded-2xl border border-blue-200">
+            <span class="font-bold text-blue-700 block mb-1">📝 [수행평가] 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 과목 | C: 수행평가제목 | D: 제출기한 | E: 상세설명</code>
+          </div>
+
+          <!-- Sheet 4: 생일 -->
+          <div class="p-3 bg-rose-50/70 rounded-2xl border border-rose-200">
+            <span class="font-bold text-rose-700 block mb-1">🎂 [생일] 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 이름 | C: 월 | D: 일 | E: MBTI | F: 축하한마디</code>
+          </div>
+
+          <!-- Sheet 5: 1인1역할 -->
+          <div class="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200">
+            <span class="font-bold text-emerald-700 block mb-1">🙋‍♀️ [1인1역할] 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 역할명 | C: 담당자이름 | D: 세부담당업무 | E: 이모지아이콘</code>
+          </div>
+
+          <!-- Sheet 6: 학생계정 보안 -->
+          <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200">
+            <span class="font-bold text-amber-700 block mb-1">🔑 [학생계정] 보안 해시 헤더 구성</span>
+            <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: 학번/아이디 | B: 이름 | C: 비밀번호_SHA256해시 | D: 권한(student/admin)</code>
+          </div>
         </div>
       </div>
+
+      <!-- Sync Box -->
+      <div class="glass-panel p-6 rounded-3xl max-w-2xl mx-auto space-y-4">
+        <h4 class="font-jua text-xl text-gray-800">🔄 구글 시트 ID 동기화 설정</h4>
+        <div class="flex gap-2">
+          <input type="text" id="google-sheet-id" class="flex-1 px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-pink-300 focus:outline-none">
+          <button id="btn-sync-sheet" class="px-4 py-2 rounded-xl btn-pink text-xs font-bold">
+            지금 동기화
+          </button>
+        </div>
+        <p id="sheet-sync-status" class="text-xs text-pink-600 font-semibold"></p>
+      </div>
+
     </section>
 
   </main>
 
+  <!-- 🔐 Student / Admin Login Modal (SHA-256 Hashing) -->
+  <div id="login-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="glass-panel p-6 rounded-3xl max-w-md w-full bg-white space-y-4 shadow-2xl relative">
+      <button id="btn-close-login" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg">
+        ✕
+      </button>
+
+      <div class="text-center">
+        <span class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 text-white flex items-center justify-center font-jua text-2xl mx-auto mb-2">
+          🔑
+        </span>
+        <h3 class="font-jua text-2xl text-gray-800">학생 & 교사 보안 로그인</h3>
+        <p class="text-xs text-gray-500 mt-1">입력된 비밀번호는 브라우저에서 **SHA-256 암호화 해싱**되어 안전하게 처리됩니다 🔒</p>
+      </div>
+
+      <form id="login-form" class="space-y-3">
+        <div>
+          <label class="text-xs font-bold text-gray-700 block mb-1">학번 / 아이디</label>
+          <input type="text" id="login-username" placeholder="예: 10301 또는 admin" required
+                 class="w-full px-3 py-2 text-xs rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 focus:outline-none">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-700 block mb-1">비밀번호</label>
+          <input type="password" id="login-password" placeholder="비밀번호 입력" required
+                 class="w-full px-3 py-2 text-xs rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300 focus:outline-none">
+        </div>
+
+        <div class="p-2.5 bg-pink-50 rounded-xl text-[11px] text-pink-700 font-mono break-all">
+          <span class="font-bold block mb-0.5">🔒 SHA-256 실시간 해시 미리보기:</span>
+          <span id="hash-preview" class="text-gray-500 italic">비밀번호를 입력하면 해시값이 표시됩니다.</span>
+        </div>
+
+        <p id="login-error" class="text-xs text-rose-500 font-bold text-center hidden"></p>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl btn-purple text-xs font-bold shadow-md">
+          🔒 로그인하기
+        </button>
+      </form>
+
+      <div class="text-[11px] text-gray-400 border-t border-gray-100 pt-3">
+        <p>• 기본 학생계정 ID: <code class="bg-gray-100 px-1 py-0.5 rounded">10301</code> / 초기비밀번호: <code class="bg-gray-100 px-1 py-0.5 rounded">10301</code></p>
+        <p>• 선생님/반장 ID: <code class="bg-gray-100 px-1 py-0.5 rounded">admin</code> / 초기비밀번호: <code class="bg-gray-100 px-1 py-0.5 rounded">1033</code></p>
+      </div>
+    </div>
+  </div>
+
   <!-- 🌸 Footer -->
   <footer class="text-center py-4 border-t border-pink-100 text-xs text-gray-400">
     <p>창원여자고등학교 1학년 3반 학급 알림판 🌸 Created with 💖 for Changwon Girls' High School</p>
-    <p class="mt-1 font-mono text-[10px]">cwgh2026103 • GitHub Pages Hosted</p>
+    <p class="mt-1 font-mono text-[10px]">cwgh2026103 • SHA-256 Hashed Security • GitHub Pages Hosted</p>
   </footer>
 
   <!-- Scripts -->
