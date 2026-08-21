@@ -45,7 +45,7 @@
         </a>
         <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
            class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1">
-          📊 구글 시트
+          📊 구글 시트 백엔드
         </a>
         
         <!-- Login / Sign-up Button -->
@@ -62,7 +62,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-        <span>SHA-256 학생 암호화 회원가입 & 실시간 시트 연동 지원</span>
+        <span>구글 시트 백엔드 연동 켜짐 (pubhtml & CSV API)</span>
       </div>
     </div>
   </header>
@@ -88,8 +88,11 @@
       <button data-tab="evaluations" class="tab-btn flex-1 min-w-[100px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
         📝 수행평가 알림
       </button>
+      <button data-tab="sheet-live" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        📊 구글시트 라이브
+      </button>
       <button data-tab="settings" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
-        ⚙️ 구글시트/관리
+        ⚙️ 설정/자동헤더
       </button>
     </div>
   </nav>
@@ -273,40 +276,65 @@
       </div>
     </section>
 
-    <!-- TAB 7: 구글시트 및 관리 -->
-    <section id="tab-settings" class="tab-content hidden space-y-6">
-      
-      <!-- 구글 시트 연동 원클릭 해결 안내 카드 -->
-      <div class="glass-panel p-6 rounded-3xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 space-y-4">
+    <!-- TAB 7: 📊 구글시트 라이브 연동 뷰어 -->
+    <section id="tab-sheet-live" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl space-y-4">
         <div class="flex items-center justify-between">
-          <h3 class="font-jua text-2xl text-emerald-900 flex items-center gap-2">
-            💡 구글 시트 연동이 안 될 때 해결법 (10초 해결)
-          </h3>
+          <div>
+            <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+              📊 구글 시트 실시간 라이브 뷰어 (Published Backend)
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">구글 시트에서 수정한 내용이 웹사이트에 게시되어 실시간으로 표시됩니다 ⚡</p>
+          </div>
           <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
              class="px-3.5 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition">
-            1-3반 시트 열기 ↗
+            구글 시트 수정하기 ↗
           </a>
         </div>
 
-        <div class="p-4 bg-white/90 rounded-2xl border border-emerald-200 text-xs text-gray-700 space-y-2">
-          <p class="font-bold text-emerald-800 text-sm">구글 시트 보안 설정 때문에 웹사이트에서 못 읽어오는 경우:</p>
-          <ol class="list-decimal list-inside space-y-1.5">
-            <li>구글 시트 좌측 상단 메뉴: **[파일]** ➔ **[공유]** ➔ **[웹에 게시]** 클릭!</li>
-            <li>**[게시]** 버튼을 클릭하면 웹사이트에서 실시간으로 구글 시트 데이터를 읽어옵니다.</li>
-            <li>또는 시트 우측 상단 **[공유]** ➔ 일반 액세스를 **[링크가 있는 모든 사용자 - 뷰어]**로 설정합니다.</li>
+        <div class="w-full h-[600px] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-inner">
+          <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQQcpbm9qzIXY30tq6_0ukEGKxaPqE4KGS8hOygOjkRIKvJwMzFSL4XdK5wauHJRfmvKjJbxYUmaDZr/pubhtml?widget=true&amp;headers=false"
+                  class="w-full h-full border-0"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 8: 설정 및 자동 헤더 생성기 -->
+    <section id="tab-settings" class="tab-content hidden space-y-6">
+      
+      <!-- 구글 시트 헤더 1초 자동 생성기 (Google Apps Script) -->
+      <div class="glass-panel p-6 rounded-3xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-jua text-2xl text-purple-900 flex items-center gap-2">
+              ⚡ 구글 시트 헤더 1초 자동 생성기 (Apps Script)
+            </h3>
+            <p class="text-xs text-purple-700 mt-0.5">
+              구글 시트에 일일이 헤더를 입력할 필요 없이 아래 코드를 복사해서 구글 시트에서 실행하시면 모든 탭과 헤더가 자동으로 짠 생성됩니다!
+            </p>
+          </div>
+          <button id="btn-copy-script" class="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700 transition shadow-md">
+            📋 자동 생성 스크립트 복사
+          </button>
+        </div>
+
+        <div class="p-3 bg-white/90 rounded-2xl border border-purple-200 text-xs space-y-2">
+          <p class="font-bold text-gray-800">💡 10초 만에 구글 시트 헤더 자동 만드는 방법:</p>
+          <ol class="list-decimal list-inside text-gray-600 space-y-1">
+            <li>[1-3반 구글 시트] ➔ 상단 메뉴 **[확장 프로그램]** ➔ **[Apps Script]** 클릭</li>
+            <li>기존 코드를 지우고 위 **[📋 자동 생성 스크립트 복사]** 버튼을 눌러 붙여넣기</li>
+            <li>상단 **[▶️ 실행]** 버튼 클릭 ➔ 7개 탭과 알림장/시간표 헤더가 예쁘게 자동 생성됩니다!</li>
           </ol>
         </div>
       </div>
 
-      <!-- Google Sheet Header Configuration Guide -->
+      <!-- Google Sheet Header Visual Guide -->
       <div class="glass-panel p-6 rounded-3xl space-y-4">
         <div>
           <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
-            📊 구글 시트 데이터 헤더 구성 가이드
+            📊 구글 시트 데이터 헤더 구성표
           </h3>
-          <p class="text-xs text-gray-500 mt-1">
-            시트의 첫 번째 줄(Header)을 아래와 같이 작성하시면 자동 연동됩니다.
-          </p>
+          <p class="text-xs text-gray-500 mt-1">자동 스크립트를 사용하지 않고 직접 입력하실 때의 칼럼 규칙입니다.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -334,18 +362,6 @@
             <code class="block bg-white p-2 rounded-xl text-[11px] text-gray-700">A: ID | B: 이름 | C: 월 | D: 일 | E: MBTI | F: 축하한마디</code>
           </div>
         </div>
-      </div>
-
-      <!-- Sync Box -->
-      <div class="glass-panel p-6 rounded-3xl max-w-2xl mx-auto space-y-4">
-        <h4 class="font-jua text-xl text-gray-800">🔄 구글 시트 ID 동기화 설정</h4>
-        <div class="flex gap-2">
-          <input type="text" id="google-sheet-id" class="flex-1 px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-pink-300 focus:outline-none">
-          <button id="btn-sync-sheet" class="px-4 py-2 rounded-xl btn-pink text-xs font-bold">
-            지금 동기화
-          </button>
-        </div>
-        <p id="sheet-sync-status" class="text-xs text-pink-600 font-semibold"></p>
       </div>
 
     </section>

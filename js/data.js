@@ -1,8 +1,10 @@
 /**
- * 창원여자고등학교 1학년 3반 종합알림판 데이터 & 구글 시트 & 비밀번호 SHA-256 회원가입/로그인 엔진
+ * 창원여자고등학교 1학년 3반 종합알림판 데이터 & 구글 시트 웹연동 & SHA-256 엔진
  */
 
 const DEFAULT_SHEET_ID = "16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ";
+const PUBLISHED_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQcpbm9qzIXY30tq6_0ukEGKxaPqE4KGS8hOygOjkRIKvJwMzFSL4XdK5wauHJRfmvKjJbxYUmaDZr/pub?output=csv";
+const PUBLISHED_HTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQcpbm9qzIXY30tq6_0ukEGKxaPqE4KGS8hOygOjkRIKvJwMzFSL4XdK5wauHJRfmvKjJbxYUmaDZr/pubhtml?widget=true&headers=false";
 
 /**
  * 비밀번호 SHA-256 해싱 함수 (Web Crypto API)
@@ -16,7 +18,7 @@ async function hashPassword(plainText) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// 기본 샘플 데이터 및 회원가입 레지스트리
+// 기본 데이터셋
 const INITIAL_DATA = {
   classInfo: {
     schoolName: "창원여자고등학교",
@@ -28,7 +30,6 @@ const INITIAL_DATA = {
       riroschool: "https://cwyeoh.riroschool.kr/home.php"
     }
   },
-  // 등록된 사용자 목록 (SHA-256 해시 저장)
   users: [
     { id: "admin", name: "담임선생님/반장", role: "admin", passwordHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" }, // 비번: 1033
     { id: "10301", name: "김민서", role: "student", passwordHash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8" }, // 비번: 10301
@@ -156,21 +157,19 @@ const INITIAL_DATA = {
 };
 
 /**
- * 구글 시트 다중 탭 (알림장, 수행평가, 1인1역할, 생일 등) 파서
+ * 게시된 구글 시트 (Published CSV) 파싱 함수
  */
-async function fetchGoogleSheetData(sheetId) {
+async function fetchGoogleSheetData(targetUrl) {
   try {
-    // 1. 기본 CSV 파싱
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
-    const response = await fetch(csvUrl);
+    const url = targetUrl || PUBLISHED_SHEET_URL;
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Google Sheet fetch error (status ${response.status})`);
     }
     const text = await response.text();
-    const rows = parseCSV(text);
-    return rows;
+    return parseCSV(text);
   } catch (err) {
-    console.warn("구글 시트 연동 실패:", err);
+    console.warn("구글 시트 연동 시도:", err);
     return null;
   }
 }

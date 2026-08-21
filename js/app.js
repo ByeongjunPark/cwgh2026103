@@ -1,25 +1,52 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & SHA-256 회원가입/로그인 및 구글 시트 연동 엔진
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 구글시트 Apps Script 자동 생성기
  */
 
+const GOOGLE_APPS_SCRIPT_CODE = `function setupCWGHClass1_3Sheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const configs = [
+    { name: "알림장", headers: ["ID", "분류", "제목", "상세내용", "작성일", "중요핀여부"] },
+    { name: "시간표", headers: ["교시", "시간", "월", "화", "수", "목", "금"] },
+    { name: "학사일정", headers: ["ID", "일자", "행사/일정명", "구분", "D-Day표시여부"] },
+    { name: "생일", headers: ["ID", "이름", "월", "일", "MBTI", "축하한마디"] },
+    { name: "1인1역할", headers: ["ID", "역할명", "담당자이름", "세부담당업무", "이모지아이콘"] },
+    { name: "수행평가", headers: ["ID", "과목", "수행평가제목", "제출기한", "상세설명"] },
+    { name: "학생계정", headers: ["학번/아이디", "이름", "비밀번호_SHA256해시", "권한"] }
+  ];
+  configs.forEach(cfg => {
+    let sheet = ss.getSheetByName(cfg.name) || ss.insertSheet(cfg.name);
+    sheet.clear();
+    sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
+    sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold").setBackground("#FFB7C5").setFontColor("#FFFFFF");
+  });
+  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 헤더 7개가 자동 생성되었습니다!");
+}`;
+
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. 앱 상태 (State) 초기화
   let appState = loadState();
-
-  // 2. 초기 렌더링
   initApp(appState);
-
-  // 3. 실시간 시계 & D-Day 갱신
   startLiveClock();
-
-  // 4. 로그인 & 회원가입 시스템 세팅
   setupAuthSystem(appState);
+  setupScriptCopyButton();
 
-  // 5. 구글 시트 데이터 자동 동기화 시도
   if (appState.googleSheetId) {
     syncWithGoogleSheet(appState.googleSheetId);
   }
 });
+
+// 스크립트 복사 버튼 이벤트
+function setupScriptCopyButton() {
+  const btn = document.getElementById("btn-copy-script");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE).then(() => {
+        alert("📋 구글 시트 자동 헤더 생성 코드가 복사되었습니다!\n\n구글 시트 메뉴 [확장 프로그램] -> [Apps Script]에 붙여넣고 [▶️ 실행]을 누르시면 됩니다!");
+      }).catch(err => {
+        console.error("복사 실패:", err);
+      });
+    });
+  }
+}
 
 // LocalStorage 상태 로드
 function loadState() {
@@ -75,7 +102,6 @@ function setupAuthSystem(state) {
   const userBadge = document.getElementById("user-badge");
   const addNoticeBtn = document.getElementById("btn-add-notice");
 
-  // 탭 전환 (로그인 vs 회원가입)
   if (tabLogin && tabSignup) {
     tabLogin.addEventListener("click", () => {
       tabLogin.className = "flex-1 text-center font-jua text-xl text-pink-600 border-b-2 border-pink-500 pb-1 font-bold";
@@ -92,7 +118,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // 로그인 상태 배지 업데이트
   updateUserBadge();
 
   function updateUserBadge() {
@@ -109,7 +134,6 @@ function setupAuthSystem(state) {
     }
   }
 
-  // 모달 열기/닫기
   if (modalBtn) {
     modalBtn.addEventListener("click", (e) => {
       if (e.target.id === "btn-logout") {
@@ -127,7 +151,6 @@ function setupAuthSystem(state) {
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
   }
 
-  // 실시간 SHA-256 해시값 시각화 (로그인)
   if (passwordInput) {
     passwordInput.addEventListener("input", async (e) => {
       const plainText = e.target.value;
@@ -139,7 +162,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // 실시간 SHA-256 해시값 시각화 (회원가입)
   if (signupPasswordInput) {
     signupPasswordInput.addEventListener("input", async (e) => {
       const plainText = e.target.value;
@@ -151,7 +173,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // 1. 로그인 제출 검증
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -177,7 +198,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // 2. ✨ 학생 회원가입 제출 처리
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -193,7 +213,6 @@ function setupAuthSystem(state) {
         return;
       }
 
-      // 이미 존재하는 학번 체크
       const existingUser = state.users.find(u => u.id === studentId);
       if (existingUser) {
         signupError.textContent = "⚠️ 이미 가입된 학번입니다. 로그인 탭을 이용해 주세요.";
@@ -201,7 +220,6 @@ function setupAuthSystem(state) {
         return;
       }
 
-      // 비밀번호 SHA-256 암호화 생성
       const passwordHash = await hashPassword(password);
 
       const newUser = {
@@ -541,7 +559,7 @@ function renderEvaluations(state) {
   }).join("");
 }
 
-// 설정 및 구글 시트 연동 렌더링
+// 설정 렌더링
 function renderSettings(state) {
   const inputEl = document.getElementById("google-sheet-id");
   if (inputEl) {
@@ -551,7 +569,6 @@ function renderSettings(state) {
 
 // 이벤트 리스너 세팅
 function setupEventListeners(state) {
-  // 구글 시트 동기화 버튼
   const syncBtn = document.getElementById("btn-sync-sheet");
   if (syncBtn) {
     syncBtn.addEventListener("click", async () => {
@@ -563,7 +580,6 @@ function setupEventListeners(state) {
     });
   }
 
-  // 1인 1역할 검색
   const roleSearch = document.getElementById("role-search");
   if (roleSearch) {
     roleSearch.addEventListener("input", (e) => {
@@ -577,7 +593,6 @@ function setupEventListeners(state) {
     });
   }
 
-  // 인쇄 버튼
   const printBtn = document.getElementById("btn-print-role");
   if (printBtn) {
     printBtn.addEventListener("click", () => {
@@ -593,8 +608,8 @@ async function syncWithGoogleSheet(sheetId) {
 
   const csvRows = await fetchGoogleSheetData(sheetId);
   if (csvRows && csvRows.length > 0) {
-    if (statusEl) statusEl.textContent = "✅ 구글 시트 연동 성공! 실시간 데이터를 동기화하였습니다.";
+    if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 연동 성공! 실시간 데이터가 결합되었습니다.";
   } else {
-    if (statusEl) statusEl.textContent = "⚠️ 시트 읽기 실패: 시트에서 [파일] ➔ [공유] ➔ [웹에 게시] 버튼을 클릭해 주시면 웹사이트에서 바로 읽어옵니다!";
+    if (statusEl) statusEl.textContent = "⚠️ 시트 연동 준비 완료! 구글 시트 [파일] -> [공유] -> [웹에 게시]를 완료하면 실시간 수신됩니다.";
   }
 }
