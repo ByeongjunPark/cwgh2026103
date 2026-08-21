@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 (NEIS 교육청 실시간 급식 API 연동)
  */
 
 const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
@@ -54,7 +54,6 @@ let currentCalYear = 2026;
 let currentCalMonth = 8;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 로컬 스토리지 데이터도 초기화하여 100% 실시간 구글 시트 / 깨끗한 상태 보장
   localStorage.removeItem("cwgh_1_3_state");
 
   let appState = loadState();
@@ -105,7 +104,7 @@ function initApp(state) {
   renderHeader(state);
   renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
   renderDashboardNotices(state);
-  renderDashboardMeal();
+  fetchRealNeisMeal(); // 나이스 교육청 실시간 급식 연동!
   renderTimetable(state);
   renderBirthdays(state);
   renderRoles(state);
@@ -113,6 +112,72 @@ function initApp(state) {
 
   setupTabNavigation();
   setupEventListeners(state);
+}
+
+// 🍱 나이스(NEIS) 교육청 오픈 API에서 창원여자고등학교 실시간 급식 연동
+async function fetchRealNeisMeal() {
+  const mealContainer = document.getElementById("dashboard-meal");
+  if (!mealContainer) return;
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const date = String(today.getDate()).padStart(2, "0");
+  const ymd = `${year}${month}${date}`;
+
+  const dayOfWeek = ["일", "월", "화", "수", "목", "금", "토"][today.getDay()];
+  const todayStr = `${today.getMonth() + 1}월 ${today.getDate()}일 (${dayOfWeek})`;
+
+  try {
+    // 경상남도교육청 (S10), 창원여자고등학교 (9010070) NEIS API
+    const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json&ATPT_OFCDC_SC_CODE=S10&SD_SCHUL_CODE=9010070&MLSV_YMD=${ymd}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row) {
+      const mealRow = data.mealServiceDietInfo[1].row[0];
+      const rawDishes = mealRow.DDISH_NM;
+      const dishes = rawDishes
+        .split("<br/>")
+        .map(d => d.replace(/[0-9.]/g, "").trim())
+        .filter(d => d.length > 0);
+
+      const kcal = mealRow.CAL_INFO || "";
+
+      mealContainer.innerHTML = `
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-amber-900 flex items-center gap-1 text-base">
+              🍱 오늘의 급식 (${todayStr})
+            </span>
+            <span class="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full">나이스 API 실시간 ⚡</span>
+          </div>
+          <div class="text-sm text-gray-700 space-y-1 bg-white/80 p-3 rounded-xl">
+            ${dishes.map(d => `<p class="flex items-center gap-1.5"><span class="text-amber-500">🍴</span> <span>${d}</span></p>`).join("")}
+          </div>
+          ${kcal ? `<p class="text-[11px] text-amber-700 font-bold mt-2 text-right">🔥 칼로리: ${kcal}</p>` : ''}
+        </div>
+      `;
+      return;
+    }
+  } catch (e) {
+    console.warn("NEIS Meal API Error:", e);
+  }
+
+  // 급식 데이터가 없는 날 (주말/공휴일)
+  mealContainer.innerHTML = `
+    <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-bold text-amber-900 flex items-center gap-1 text-base">
+          🍱 오늘의 급식 (${todayStr})
+        </span>
+        <span class="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full">창원여고 나이스 API ⚡</span>
+      </div>
+      <div class="text-sm text-gray-500 p-4 text-center bg-white/80 rounded-xl">
+        🌸 오늘은 급식이 없는 날(주말/휴업일)입니다.
+      </div>
+    </div>
+  `;
 }
 
 function setupQuoteEditor(state) {
@@ -664,31 +729,6 @@ function renderDashboardNotices(state) {
         <p class="text-sm text-gray-600">${n.content}</p>
       </div>
     `).join("");
-  }
-}
-
-function renderDashboardMeal() {
-  const mealContainer = document.getElementById("dashboard-meal");
-  if (mealContainer) {
-    const todayStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-    mealContainer.innerHTML = `
-      <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-bold text-amber-900 flex items-center gap-1 text-base">
-            🍱 오늘의 맛있는 급식 (${todayStr})
-          </span>
-          <span class="text-xs bg-amber-200 text-amber-800 font-bold px-2 py-0.5 rounded-full">창원여고 식단</span>
-        </div>
-        <div class="text-sm text-gray-700 space-y-1 bg-white/80 p-3 rounded-xl">
-          <p>🌾 현미찰밥</p>
-          <p>🍲 얼큰쇠고기무국</p>
-          <p>🍖 훈제오리구이 & 머스타드소스</p>
-          <p>🥗 콤비네이션 샐러드 & 드레싱</p>
-          <p>🥬 배추김치</p>
-          <p>🥤 톡톡 핑크 자몽에이드</p>
-        </div>
-      </div>
-    `;
   }
 }
 
