@@ -1,8 +1,8 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 (NEIS 교육청 실시간 급식 API 연동)
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 (나이스 NEIS 중식/석식 2-Way 연동 & 깔끔 정돈)
  */
 
-const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
+const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 양방향 자동 연동 스크립트
 
 function setupCWGHClass1_3Sheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -75,7 +75,7 @@ function setupScriptCopyButton() {
   if (btn) {
     btn.addEventListener("click", () => {
       navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE).then(() => {
-        alert("📋 구글 시트 양방향 백엔드 스크립트가 복사되었습니다!");
+        alert("📋 구글 시트 자동 생성 스크립트가 복사되었습니다!");
       });
     });
   }
@@ -104,7 +104,7 @@ function initApp(state) {
   renderHeader(state);
   renderMonthlyGridCalendar(state, currentCalYear, currentCalMonth);
   renderDashboardNotices(state);
-  fetchRealNeisMeal(); // 나이스 교육청 실시간 급식 연동!
+  fetchRealNeisMeal(); // 나이스 교육청 실시간 중식/석식 연동!
   renderTimetable(state);
   renderBirthdays(state);
   renderRoles(state);
@@ -114,7 +114,17 @@ function initApp(state) {
   setupEventListeners(state);
 }
 
-// 🍱 나이스(NEIS) 교육청 오픈 API에서 창원여자고등학교 실시간 급식 연동
+// 🍱 메뉴 이름 깔끔 정돈 (알레르기 숫자 및 빈 괄호 () 완전 제거 정제 함수)
+function cleanDishName(dish) {
+  if (!dish) return "";
+  return dish
+    .replace(/\s*\([0-9.\s]*\)/g, "")  // (5.8.9.18) 또는 () 제거
+    .replace(/\*/g, "")                // * 제거
+    .replace(/\s*\(\s*\)/g, "")        // 남은 빈 () 제거
+    .trim();
+}
+
+// 🍱 나이스(NEIS) 교육청 오픈 API: 창원여자고등학교 실시간 [중식(점심) & 석식(저녁)] 연동
 async function fetchRealNeisMeal() {
   const mealContainer = document.getElementById("dashboard-meal");
   if (!mealContainer) return;
@@ -134,48 +144,115 @@ async function fetchRealNeisMeal() {
     const res = await fetch(url);
     const data = await res.json();
 
+    let lunchRow = null;
+    let dinnerRow = null;
+
     if (data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row) {
-      const mealRow = data.mealServiceDietInfo[1].row[0];
-      const rawDishes = mealRow.DDISH_NM;
-      const dishes = rawDishes
-        .split("<br/>")
-        .map(d => d.replace(/[0-9.]/g, "").trim())
-        .filter(d => d.length > 0);
+      const rows = data.mealServiceDietInfo[1].row;
+      lunchRow = rows.find(r => r.MMEAL_SC_CODE === "2");  // 2: 중식(점심)
+      dinnerRow = rows.find(r => r.MMEAL_SC_CODE === "3"); // 3: 석식(저녁)
+    }
 
-      const kcal = mealRow.CAL_INFO || "";
-
-      mealContainer.innerHTML = `
-        <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <span class="font-bold text-amber-900 flex items-center gap-1 text-base">
-              🍱 오늘의 급식 (${todayStr})
+    if (lunchRow || dinnerRow) {
+      let html = `
+        <div class="glass-panel p-5 rounded-3xl space-y-4 bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-pink-50/80 border border-amber-200 shadow-sm">
+          <div class="flex items-center justify-between border-b border-amber-200/60 pb-3">
+            <div>
+              <h3 class="font-jua text-xl text-amber-950 flex items-center gap-2">
+                🍱 오늘의 창원여고 급식 (${todayStr})
+              </h3>
+              <p class="text-xs text-amber-700 mt-0.5">점심(중식)과 저녁(석식) 메뉴가 모두 실시간 표시됩니다 ⚡</p>
+            </div>
+            <span class="text-[10px] bg-emerald-500 text-white font-bold px-2.5 py-1 rounded-full shadow-sm">
+              나이스 API 실시간 ⚡
             </span>
-            <span class="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full">나이스 API 실시간 ⚡</span>
           </div>
-          <div class="text-sm text-gray-700 space-y-1 bg-white/80 p-3 rounded-xl">
-            ${dishes.map(d => `<p class="flex items-center gap-1.5"><span class="text-amber-500">🍴</span> <span>${d}</span></p>`).join("")}
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      `;
+
+      // ☀️ 중식 (점심)
+      if (lunchRow) {
+        const dishes = lunchRow.DDISH_NM
+          .split("<br/>")
+          .map(cleanDishName)
+          .filter(d => d.length > 0);
+
+        html += `
+          <div class="bg-white/90 p-4 rounded-2xl border border-amber-100 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-amber-100">
+                <span class="font-bold text-amber-900 text-sm flex items-center gap-1.5">
+                  ☀️ 오늘의 점심 (중식)
+                </span>
+                ${lunchRow.CAL_INFO ? `<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">${lunchRow.CAL_INFO}</span>` : ''}
+              </div>
+              <div class="text-xs text-gray-700 space-y-1.5 py-1">
+                ${dishes.map(d => `<p class="flex items-center gap-1.5"><span class="text-amber-500 text-xs">🍴</span><span class="font-medium">${d}</span></p>`).join("")}
+              </div>
+            </div>
           </div>
-          ${kcal ? `<p class="text-[11px] text-amber-700 font-bold mt-2 text-right">🔥 칼로리: ${kcal}</p>` : ''}
+        `;
+      } else {
+        html += `
+          <div class="bg-white/60 p-4 rounded-2xl border border-amber-100 text-center text-xs text-gray-400 flex items-center justify-center">
+            ☀️ 오늘 점심(중식) 정보가 없거나 휴무일입니다.
+          </div>
+        `;
+      }
+
+      // 🌙 석식 (저녁)
+      if (dinnerRow) {
+        const dishes = dinnerRow.DDISH_NM
+          .split("<br/>")
+          .map(cleanDishName)
+          .filter(d => d.length > 0);
+
+        html += `
+          <div class="bg-white/90 p-4 rounded-2xl border border-purple-100 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-purple-100">
+                <span class="font-bold text-purple-900 text-sm flex items-center gap-1.5">
+                  🌙 오늘의 저녁 (석식)
+                </span>
+                ${dinnerRow.CAL_INFO ? `<span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-md">${dinnerRow.CAL_INFO}</span>` : ''}
+              </div>
+              <div class="text-xs text-gray-700 space-y-1.5 py-1">
+                ${dishes.map(d => `<p class="flex items-center gap-1.5"><span class="text-purple-500 text-xs">🌙</span><span class="font-medium">${d}</span></p>`).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="bg-white/60 p-4 rounded-2xl border border-purple-100 text-center text-xs text-gray-400 flex items-center justify-center">
+            🌙 오늘 저녁(석식) 정보가 없습니다.
+          </div>
+        `;
+      }
+
+      html += `
+          </div>
         </div>
       `;
+
+      mealContainer.innerHTML = html;
       return;
     }
   } catch (e) {
     console.warn("NEIS Meal API Error:", e);
   }
 
-  // 급식 데이터가 없는 날 (주말/공휴일)
+  // 주말 또는 급식이 전혀 없는 날
   mealContainer.innerHTML = `
-    <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+    <div class="glass-panel p-5 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-center">
       <div class="flex items-center justify-between mb-2">
-        <span class="font-bold text-amber-900 flex items-center gap-1 text-base">
-          🍱 오늘의 급식 (${todayStr})
-        </span>
+        <span class="font-bold text-amber-900 text-sm">🍱 오늘의 급식 (${todayStr})</span>
         <span class="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full">창원여고 나이스 API ⚡</span>
       </div>
-      <div class="text-sm text-gray-500 p-4 text-center bg-white/80 rounded-xl">
-        🌸 오늘은 급식이 없는 날(주말/휴업일)입니다.
-      </div>
+      <p class="text-xs text-gray-500 p-4 bg-white/80 rounded-2xl">
+        🌸 오늘은 급식이 없는 날(주말/휴업일)이거나 메뉴 정보가 등록되지 않았습니다.
+      </p>
     </div>
   `;
 }
@@ -454,7 +531,7 @@ function setupAddEventModal(state) {
 
       modal.classList.add("hidden");
       form.reset();
-      alert("✨ 새 일정이 웹사이트 및 구글 시트에 성공적으로 등록되었습니다! 🌸");
+      alert("✨ 새 일정이 성공적으로 등록되었습니다! 🌸");
     });
   }
 }
@@ -607,7 +684,7 @@ function setupAuthSystem(state) {
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 ${role === 'admin' ? '담임선생님' : '학생'} 회원가입이 성공적으로 완료되었습니다!\n구글 시트 백엔드로 자동 등록되었습니다. 🌸`);
+      alert(`🎉 ${role === 'admin' ? '담임선생님' : '학생'} 회원가입이 성공적으로 완료되었습니다! 🌸`);
     });
   }
 }
@@ -678,7 +755,7 @@ function highlightCurrentPeriod(now) {
       const startMin = startH * 60 + startM;
       const endMin = endH * 60 + endM;
 
-      const cellId = `cell-${currentDayIndex}-${p.period}`;
+      const cellId = `cell-${dIdx + 1}-${p.period}`;
       const el = document.getElementById(cellId);
       if (el) {
         if (currentMinutes >= startMin && currentMinutes <= endMin) {
@@ -897,5 +974,5 @@ function setupEventListeners(state) {
 
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "🔒 담임 선생님 전용 보안 백엔드가 결합되었습니다.";
+  if (statusEl) statusEl.textContent = "🔒 담임 선생님 관리 공간입니다.";
 }
