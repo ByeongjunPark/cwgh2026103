@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>창원여자고등학교 1학년 3반 종합 알림판 🌸</title>
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Canvas Confetti for Birthday Celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="p-3 md:p-6 max-w-7xl mx-auto min-h-screen flex flex-col justify-between">
+
+  <!-- 🌸 Top Bar: Quick Links & Live Clock -->
+  <header class="mb-6">
+    <div class="glass-panel p-4 rounded-3xl mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center font-jua text-xl shadow-lg shadow-pink-200 animate-float">
+          1-3
+        </span>
+        <div>
+          <h1 class="font-jua text-2xl md:text-3xl text-gray-800 flex items-center gap-2">
+            창원여자고등학교 <span class="text-pink-500">1학년 3반</span>
+            <span class="text-xs font-normal px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-600 font-sans">종합 알림판 🌸</span>
+          </h1>
+          <p id="class-motto" class="text-xs text-gray-500 font-gowun mt-0.5">🌸 서로 존중하고 함께 빛나는 1학년 3반 🌸</p>
+        </div>
+      </div>
+
+      <!-- Quick Link Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="https://cwyeo-h.gne.go.kr" target="_blank" rel="noopener noreferrer" 
+           class="px-3 py-1.5 rounded-xl bg-white border border-pink-200 text-xs font-semibold text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition flex items-center gap-1">
+          🏫 창원여고 홈
+        </a>
+        <a href="https://cwyeoh.riroschool.kr/home.php" target="_blank" rel="noopener noreferrer" 
+           class="px-3 py-1.5 rounded-xl bg-white border border-purple-200 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition flex items-center gap-1">
+          📚 리로스쿨
+        </a>
+        <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
+           class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition flex items-center gap-1">
+          📊 구글 시트 편집
+        </a>
+      </div>
+    </div>
+
+    <!-- Live Clock & Status -->
+    <div class="flex items-center justify-between px-2 text-xs text-gray-500">
+      <div id="live-clock" class="flex items-center gap-1 font-semibold">
+        <!-- Live Clock rendered by app.js -->
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span>실시간 알림 온디맨드 연동 중</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 🎀 Navigation Tabs -->
+  <nav class="mb-6">
+    <div class="glass-panel p-1.5 rounded-2xl flex flex-wrap md:flex-nowrap gap-1 overflow-x-auto">
+      <button data-tab="dashboard" class="tab-btn flex-1 min-w-[100px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition bg-white text-pink-600 shadow-sm font-bold flex items-center justify-center gap-1">
+        📢 메인 대시보드
+      </button>
+      <button data-tab="timetable" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        🕒 시간표
+      </button>
+      <button data-tab="calendar" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        📅 학사일정/D-Day
+      </button>
+      <button data-tab="birthdays" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        🎂 3반 생일판
+      </button>
+      <button data-tab="roles" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        🙋‍♀️ 1인 1역할
+      </button>
+      <button data-tab="evaluations" class="tab-btn flex-1 min-w-[100px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        📝 수행평가 알림
+      </button>
+      <button data-tab="settings" class="tab-btn flex-1 min-w-[90px] py-2.5 px-3 rounded-xl text-xs md:text-sm font-semibold transition text-gray-600 hover:text-pink-500 flex items-center justify-center gap-1">
+        ⚙️ 설정/동기화
+      </button>
+    </div>
+  </nav>
+
+  <!-- 🌟 Main Content Area -->
+  <main class="flex-1 mb-6">
+
+    <!-- TAB 1: 메인 대시보드 -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Cols: Notices & Lunch -->
+        <div class="lg:col-span-2 space-y-6">
+          
+          <!-- Notices Box -->
+          <div class="glass-panel p-5 rounded-3xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-jua text-xl text-gray-800 flex items-center gap-2">
+                📌 알림장 & 주요 학급 공지
+              </h3>
+              <span class="text-xs bg-pink-100 text-pink-600 font-bold px-2.5 py-1 rounded-full">최신 업데이트</span>
+            </div>
+            <div id="dashboard-notices" class="space-y-3">
+              <!-- Rendered by app.js -->
+            </div>
+          </div>
+
+          <!-- Today's Lunch Box -->
+          <div id="dashboard-meal" class="glass-panel p-5 rounded-3xl">
+            <!-- Meal widget rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- Right 1 Col: D-Day & Quick Status -->
+        <div class="space-y-6">
+          
+          <!-- D-Day Widget -->
+          <div class="glass-panel p-5 rounded-3xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-jua text-xl text-gray-800 flex items-center gap-2">
+                ⏳ 다가오는 주요 D-Day
+              </h3>
+              <span class="text-xs text-rose-500 font-bold">카운트다운</span>
+            </div>
+            <div id="dashboard-ddays" class="space-y-2.5">
+              <!-- Rendered by app.js -->
+            </div>
+          </div>
+
+          <!-- School Links Highlight -->
+          <div class="glass-panel p-5 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-400 text-white shadow-lg shadow-pink-200">
+            <h4 class="font-jua text-lg mb-2">창원여고 필수 사이트 🔗</h4>
+            <p class="text-xs opacity-90 mb-4">학사 일정, 가정통신문, 리로스쿨 과제 제출 바로가기</p>
+            <div class="space-y-2">
+              <a href="https://cwyeo-h.gne.go.kr" target="_blank" rel="noopener noreferrer" 
+                 class="w-full py-2 px-3 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-xs font-semibold flex items-center justify-between transition">
+                <span>창원여자고등학교 공식 홈페이지</span>
+                <span>➔</span>
+              </a>
+              <a href="https://cwyeoh.riroschool.kr/home.php" target="_blank" rel="noopener noreferrer" 
+                 class="w-full py-2 px-3 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-xs font-semibold flex items-center justify-between transition">
+                <span>창원여고 리로스쿨 (Riroschool)</span>
+                <span>➔</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 시간표 -->
+    <section id="tab-timetable" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+              🕒 1학년 3반 주간 시간표
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">현재 진행 중인 교시는 분홍색 라이트가 표시됩니다 ⏰</p>
+          </div>
+          <button onclick="window.print()" class="no-print self-start px-3 py-1.5 rounded-xl bg-pink-100 text-pink-700 font-semibold text-xs hover:bg-pink-200 transition">
+            🖨️ 시간표 인쇄
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse rounded-2xl overflow-hidden table-timetable">
+            <thead>
+              <tr class="text-center text-sm font-bold">
+                <th class="p-3 w-24">교시/시간</th>
+                <th class="p-3">월요일</th>
+                <th class="p-3">화요일</th>
+                <th class="p-3">수요일</th>
+                <th class="p-3">목요일</th>
+                <th class="p-3">금요일</th>
+              </tr>
+            </thead>
+            <tbody id="timetable-body">
+              <!-- Rendered by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 학사일정 -->
+    <section id="tab-calendar" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-jua text-2xl text-gray-800">
+            📅 창원여고 2026학년도 학사일정
+          </h3>
+          <span class="text-xs text-gray-400">주요 중간/기말고사, 행사의 D-Day가 포함되어 있습니다</span>
+        </div>
+        <div id="calendar-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 생일판 -->
+    <section id="tab-birthdays" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+              🎂 1학년 3반 우리들의 생일판 💖
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">친구의 생일 축하 버튼을 누르면 폭죽이 팡팡 터져요! 🎉</p>
+          </div>
+        </div>
+        <div id="birthday-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: 1인 1역할 -->
+    <section id="tab-roles" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+              🙋‍♀️ 1인 1역할 담당자 표
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">우리반 모두가 함께 만드는 깨끗하고 즐거운 교실 🌸</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input type="text" id="role-search" placeholder="이름 또는 역할 검색..." 
+                   class="px-3 py-1.5 text-xs rounded-xl border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-300 w-48">
+            <button id="btn-print-role" class="no-print px-3 py-1.5 rounded-xl bg-purple-100 text-purple-700 font-semibold text-xs hover:bg-purple-200 transition">
+              🖨️ 인쇄 모드
+            </button>
+          </div>
+        </div>
+
+        <div id="role-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: 수행평가 -->
+    <section id="tab-evaluations" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+              📝 과목별 수행평가 알림장
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">제출 마감 기한을 확인하여 미리 준비해 주세요 💡</p>
+          </div>
+        </div>
+        <div id="evaluation-list" class="space-y-4">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: 설정 및 동기화 -->
+    <section id="tab-settings" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-6 rounded-3xl max-w-2xl mx-auto space-y-6">
+        <div>
+          <h3 class="font-jua text-2xl text-gray-800 flex items-center gap-2">
+            ⚙️ 데이터 연동 & 구글 시트 관리
+          </h3>
+          <p class="text-xs text-gray-500 mt-1">선생님과 반장 학생이 구글 시트에서 알림장과 일정을 쉽게 수정할 수 있습니다.</p>
+        </div>
+
+        <!-- Google Sheet Link Box -->
+        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-900 text-sm">📊 1-3반 전용 구글 시트</span>
+            <a href="https://docs.google.com/spreadsheets/d/16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ/edit" target="_blank" rel="noopener noreferrer"
+               class="px-3 py-1 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition">
+              구글 시트 바로가기 ↗
+            </a>
+          </div>
+          <p class="text-xs text-emerald-700">
+            구글 시트에서 시간표, 알림장, 생일, 수행평가를 수정하신 후 구글 시트를 [웹에 게시] 또는 [링크가 있는 모든 사용자-뷰어]로 설정해 주시면 자동으로 본 웹사이트에 반영됩니다!
+          </p>
+        </div>
+
+        <!-- Sheet ID Input & Sync Button -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-gray-700">구글 시트 Document ID</label>
+          <div class="flex gap-2">
+            <input type="text" id="google-sheet-id" class="flex-1 px-3 py-2 text-xs rounded-xl border border-gray-300 font-mono focus:ring-2 focus:ring-pink-300 focus:outline-none">
+            <button id="btn-sync-sheet" class="px-4 py-2 rounded-xl btn-pink text-xs font-bold">
+              🔄 지금 동기화
+            </button>
+          </div>
+          <p id="sheet-sync-status" class="text-xs text-pink-600 font-semibold"></p>
+        </div>
+
+        <!-- Info Notice -->
+        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-600 space-y-1">
+          <p class="font-bold text-gray-800">💡 로그인 없는 편리한 알림판 가이드</p>
+          <p>• 학생들은 번거로운 로그인 과정 없이 URL 접속만으로 최신 정보를 한눈에 볼 수 있습니다.</p>
+          <p>• 인터넷 연결이 끊겨도 기본 데이터와 브라우저 내장 저장소(LocalStorage)를 통해 안전하게 유지됩니다.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 🌸 Footer -->
+  <footer class="text-center py-4 border-t border-pink-100 text-xs text-gray-400">
+    <p>창원여자고등학교 1학년 3반 학급 알림판 🌸 Created with 💖 for Changwon Girls' High School</p>
+    <p class="mt-1 font-mono text-[10px]">cwgh2026103 • GitHub Pages Hosted</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
