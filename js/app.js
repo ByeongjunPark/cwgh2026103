@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 인터랙티브 월별 캘린더 대시보드 & iPad 터치 웹 컨트롤러
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
  */
 
 const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
@@ -50,12 +50,15 @@ function doPost(e) {
   }
 }`;
 
-// 현재 캘린더 네비게이션 상태 (기본 2026년 8월)
 let currentCalYear = 2026;
-let currentCalMonth = 8; // 1-indexed
+let currentCalMonth = 8;
 
 document.addEventListener("DOMContentLoaded", () => {
   let appState = loadState();
+
+  // 기본 데모 담임 계정 제거 (박병준 선생님이 1등으로 직접 가입하실 수 있도록)
+  appState.users = appState.users.filter(u => u.role !== "admin");
+
   initApp(appState);
   startLiveClock();
   setupAuthSystem(appState);
@@ -113,7 +116,6 @@ function initApp(state) {
   setupEventListeners(state);
 }
 
-// 💬 오늘의 명언/한마디 수정
 function setupQuoteEditor(state) {
   const btn = document.getElementById("btn-edit-quote");
   const display = document.getElementById("quote-display");
@@ -136,7 +138,6 @@ function setupQuoteEditor(state) {
   }
 }
 
-// 📅 1. 인터랙티브 월별 캘린더 그리드 랜더러
 function renderMonthlyGridCalendar(state, year, month) {
   const gridContainer = document.getElementById("calendar-grid");
   const monthTitle = document.getElementById("calendar-month-title");
@@ -144,18 +145,15 @@ function renderMonthlyGridCalendar(state, year, month) {
 
   monthTitle.textContent = `${year}년 ${month}월 🌸`;
 
-  // 해당 월의 1일 날짜 및 총 일수 계산
-  const firstDayIndex = new Date(year, month - 1, 1).getDay(); // 0: 일요일
+  const firstDayIndex = new Date(year, month - 1, 1).getDay();
   const totalDays = new Date(year, month, 0).getDate();
   const prevMonthTotalDays = new Date(year, month - 1, 0).getDate();
 
   const today = new Date();
   const isCurrentRealMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
 
-  // 전체 캘린더 이벤트 매핑
   const eventsByDate = {};
 
-  // 학사일정
   state.calendar.forEach(c => {
     if (!eventsByDate[c.date]) eventsByDate[c.date] = [];
     eventsByDate[c.date].push({
@@ -166,7 +164,6 @@ function renderMonthlyGridCalendar(state, year, month) {
     });
   });
 
-  // 수행평가
   state.evaluations.forEach(e => {
     if (!eventsByDate[e.deadline]) eventsByDate[e.deadline] = [];
     eventsByDate[e.deadline].push({
@@ -177,7 +174,6 @@ function renderMonthlyGridCalendar(state, year, month) {
     });
   });
 
-  // 친구 생일 (해당 월)
   state.birthdays.forEach(b => {
     const mStr = String(b.month).padStart(2, "0");
     const dStr = String(b.day).padStart(2, "0");
@@ -194,7 +190,6 @@ function renderMonthlyGridCalendar(state, year, month) {
 
   let html = "";
 
-  // 1. 이전 달 빈 날짜
   for (let i = firstDayIndex - 1; i >= 0; i--) {
     const prevDay = prevMonthTotalDays - i;
     html += `
@@ -204,7 +199,6 @@ function renderMonthlyGridCalendar(state, year, month) {
     `;
   }
 
-  // 2. 현재 달 날짜 (1일 ~ totalDays)
   for (let day = 1; day <= totalDays; day++) {
     const mStr = String(month).padStart(2, "0");
     const dStr = String(day).padStart(2, "0");
@@ -232,7 +226,6 @@ function renderMonthlyGridCalendar(state, year, month) {
     `;
   }
 
-  // 3. 다음 달 빈 날짜 매꾸기
   const totalRendered = firstDayIndex + totalDays;
   const remainingCells = (42 - totalRendered) % 7;
   for (let i = 1; i <= remainingCells; i++) {
@@ -246,7 +239,6 @@ function renderMonthlyGridCalendar(state, year, month) {
   gridContainer.innerHTML = html;
 }
 
-// 📅 캘린더 월 이동 컨트롤
 function setupInteractiveCalendarControls(state) {
   const prevBtn = document.getElementById("btn-prev-month");
   const nextBtn = document.getElementById("btn-next-month");
@@ -274,7 +266,6 @@ function setupInteractiveCalendarControls(state) {
   }
 }
 
-// 📱 2. 날짜 클릭 팝업 상세 모달 (Day Detail Popup Modal)
 window.openDayDetailModal = function(dateStr) {
   const modal = document.getElementById("day-detail-modal");
   const titleEl = document.getElementById("day-modal-date-title");
@@ -287,7 +278,6 @@ window.openDayDetailModal = function(dateStr) {
   const [y, m, d] = dateStr.split("-");
   titleEl.textContent = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 상세 정보 🌸`;
 
-  // 이 날짜의 학사일정 + 수행평가 + 생일 필터링
   const events = [];
 
   state.calendar.filter(c => c.date === dateStr).forEach(c => {
@@ -342,7 +332,6 @@ window.openDayDetailModal = function(dateStr) {
   modal.classList.remove("hidden");
 };
 
-// ✏️ 3. 새 일정/수행평가 웹 직접 등록 모달
 function openAddEventModal(defaultDate = "") {
   const modal = document.getElementById("add-event-modal");
   const dateInput = document.getElementById("event-date");
@@ -415,7 +404,6 @@ function setupAuthSystem(state) {
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
   const signupRoleSelect = document.getElementById("signup-role");
-  const adminCodeBox = document.getElementById("admin-code-box");
 
   const passwordInput = document.getElementById("login-password");
   const signupPasswordInput = document.getElementById("signup-password");
@@ -425,16 +413,6 @@ function setupAuthSystem(state) {
 
   const adminTabBtn = document.getElementById("admin-tab-btn");
   const adminSheetLink = document.getElementById("admin-sheet-link");
-
-  if (signupRoleSelect && adminCodeBox) {
-    signupRoleSelect.addEventListener("change", (e) => {
-      if (e.target.value === "admin") {
-        adminCodeBox.classList.remove("hidden");
-      } else {
-        adminCodeBox.classList.add("hidden");
-      }
-    });
-  }
 
   if (tabLogin && tabSignup) {
     tabLogin.addEventListener("click", () => {
@@ -458,7 +436,7 @@ function setupAuthSystem(state) {
     if (state.currentUser) {
       const isRoleAdmin = state.currentUser.role === "admin";
       userBadge.innerHTML = `
-        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '선생님' : '학생'}) 
+        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '담임선생님' : '학생'}) 
         <span class="ml-1 text-[10px] bg-red-400 text-white px-1.5 py-0.5 rounded-md hover:bg-red-500" id="btn-logout">로그아웃</span>
       `;
 
@@ -516,6 +494,7 @@ function setupAuthSystem(state) {
     });
   }
 
+  // 👑 담임선생님 단 1명만 가입 허용하는 회원가입 로직
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -525,7 +504,6 @@ function setupAuthSystem(state) {
       const studentId = document.getElementById("signup-studentid").value.trim();
       const name = document.getElementById("signup-name").value.trim();
       const password = signupPasswordInput.value;
-      const adminCode = document.getElementById("signup-admin-code").value.trim();
 
       if (!studentId || !name || !password) {
         signupError.textContent = "❌ 모든 항목을 작성해 주세요.";
@@ -533,10 +511,14 @@ function setupAuthSystem(state) {
         return;
       }
 
-      if (role === "admin" && adminCode !== "1033") {
-        signupError.textContent = "❌ 담임선생님 인증 암호가 올바르지 않습니다. (1033)";
-        signupError.classList.remove("hidden");
-        return;
+      // 🔒 담임선생님 계정 중복 검사 (단 1명만 전용 가입)
+      if (role === "admin") {
+        const existingAdmin = state.users.find(u => u.role === "admin");
+        if (existingAdmin) {
+          signupError.textContent = `⚠️ 담임선생님 계정은 이미 1명(${existingAdmin.name}) 등록되어 있습니다. 기존 계정으로 로그인해 주세요.`;
+          signupError.classList.remove("hidden");
+          return;
+        }
       }
 
       if (state.users.find(u => u.id === studentId)) {
@@ -563,7 +545,7 @@ function setupAuthSystem(state) {
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 ${role === 'admin' ? '담임 선생님(박병준 선생님)' : '학생'} 회원가입이 완료되었습니다!\n구글 시트 백엔드로 자동 등록되었습니다. 🌸`);
+      alert(`🎉 ${role === 'admin' ? '담임선생님' : '학생'} 회원가입이 성공적으로 완료되었습니다!\n구글 시트 백엔드로 자동 등록되었습니다. 🌸`);
     });
   }
 }

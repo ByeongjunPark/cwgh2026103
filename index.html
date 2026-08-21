@@ -64,7 +64,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="inline-block w-2 h-2 rounded-full bg-pink-400 animate-ping"></span>
-        <span>아이패드/태블릿 터치 터치 웹 최적화 📱</span>
+        <span>아이패드/태블릿 터치 웹 최적화 📱</span>
       </div>
     </div>
   </header>
@@ -319,7 +319,7 @@
 
   </main>
 
-  <!-- 📱 1. 날짜 클릭 팝업 상세 모달 (Day Detail Popup Modal) -->
+  <!-- 📱 1. 날짜 클릭 팝업 상세 모달 -->
   <div id="day-detail-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="glass-panel p-6 rounded-3xl max-w-lg w-full bg-white space-y-4 shadow-2xl relative">
       <button id="btn-close-day-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg">
@@ -336,19 +336,17 @@
         </div>
       </div>
 
-      <!-- 날짜별 일정 목록 -->
       <div id="day-modal-event-list" class="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
         <!-- Rendered by app.js -->
       </div>
 
-      <!-- 이 날짜에 일정 추가하기 버튼 -->
       <button id="btn-day-add-event" class="w-full py-2.5 rounded-xl btn-pink text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
         + 이 날짜에 새 일정 / 수행평가 작성하기
       </button>
     </div>
   </div>
 
-  <!-- ✏️ 2. 웹에서 직접 일정/수행평가 추가 모달 (Add Event Modal) -->
+  <!-- ✏️ 2. 웹에서 직접 일정/수행평가 추가 모달 -->
   <div id="add-event-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="glass-panel p-6 rounded-3xl max-w-md w-full bg-white space-y-4 shadow-2xl relative">
       <button id="btn-close-add-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-lg">
@@ -377,7 +375,7 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-gray-700 block mb-1">제목 / 학목명</label>
+          <label class="text-xs font-bold text-gray-700 block mb-1">제목 / 항목명</label>
           <input type="text" id="event-title" placeholder="예: 국어 독서 감상문 제출" required class="w-full px-3 py-2 text-xs rounded-xl border border-pink-200 focus:ring-2 focus:ring-pink-300">
         </div>
 
@@ -430,13 +428,13 @@
         </button>
       </form>
 
-      <!-- FORM 2: 회원가입 -->
+      <!-- FORM 2: 회원가입 (담임선생님 단 1명 가입 제한 적용) -->
       <form id="signup-form" class="space-y-3 hidden">
         <div>
           <label class="text-xs font-bold text-gray-700 block mb-1">회원 구분</label>
           <select id="signup-role" class="w-full px-3 py-2 text-xs rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-300 focus:outline-none font-bold text-purple-700">
             <option value="student">🌸 1학년 3반 학생 회원가입</option>
-            <option value="admin">👑 담임선생님 (박병준 선생님) 회원가입</option>
+            <option value="admin">👑 담임선생님 회원가입 (단 1명만 전용 가입)</option>
           </select>
         </div>
         <div>
@@ -453,13 +451,6 @@
           <label class="text-xs font-bold text-gray-700 block mb-1">비밀번호 설정</label>
           <input type="password" id="signup-password" placeholder="사용할 비밀번호 입력" required
                  class="w-full px-3 py-2 text-xs rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-300 focus:outline-none">
-        </div>
-
-        <!-- 담임 선생님 마스터 인증 코드 -->
-        <div id="admin-code-box" class="hidden p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-1">
-          <label class="text-xs font-bold text-amber-900 block">👑 담임선생님 인증 암호 (1033)</label>
-          <input type="password" id="signup-admin-code" placeholder="선생님 인증 암호 입력 (1033)"
-                 class="w-full px-3 py-1.5 text-xs rounded-xl border border-amber-300 focus:ring-2 focus:ring-amber-400 focus:outline-none">
         </div>
 
         <p id="signup-error" class="text-xs text-rose-500 font-bold text-center hidden"></p>
