@@ -113,9 +113,7 @@ function setupAuthSystem(state) {
   const adminCodeBox = document.getElementById("admin-code-box");
 
   const passwordInput = document.getElementById("login-password");
-  const hashPreview = document.getElementById("hash-preview");
   const signupPasswordInput = document.getElementById("signup-password");
-  const signupHashPreview = document.getElementById("signup-hash-preview");
   const loginError = document.getElementById("login-error");
   const signupError = document.getElementById("signup-error");
   const userBadge = document.getElementById("user-badge");
@@ -152,12 +150,11 @@ function setupAuthSystem(state) {
 
   updateUserBadge();
 
-  // 🔒 오직 박병준 선생님/담임교사 로그인 시에만 구글 시트 및 백엔드 설정 노출!
   function updateUserBadge() {
     if (state.currentUser) {
       const isRoleAdmin = state.currentUser.role === "admin";
       userBadge.innerHTML = `
-        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '선생님/관리자' : '학생'}) 
+        ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '선생님' : '학생'}) 
         <span class="ml-1 text-[10px] bg-red-400 text-white px-1.5 py-0.5 rounded-md hover:bg-red-500" id="btn-logout">로그아웃</span>
       `;
 
@@ -195,18 +192,6 @@ function setupAuthSystem(state) {
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
   }
 
-  if (passwordInput) {
-    passwordInput.addEventListener("input", async (e) => {
-      hashPreview.textContent = e.target.value ? await hashPassword(e.target.value) : "비밀번호를 입력하면 해시가 표시됩니다.";
-    });
-  }
-
-  if (signupPasswordInput) {
-    signupPasswordInput.addEventListener("input", async (e) => {
-      signupHashPreview.textContent = e.target.value ? await hashPassword(e.target.value) : "비밀번호 입력 시 암호화됩니다.";
-    });
-  }
-
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -230,7 +215,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // ✨ 직접 회원가입 처리 (선생님 & 학생)
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -249,13 +233,13 @@ function setupAuthSystem(state) {
       }
 
       if (role === "admin" && adminCode !== "1033") {
-        signupError.textContent = "❌ 선생님/관리자 인증 암호가 올바르지 않습니다. (기본: 1033)";
+        signupError.textContent = "❌ 담임선생님 인증 암호가 올바르지 않습니다. (1033)";
         signupError.classList.remove("hidden");
         return;
       }
 
       if (state.users.find(u => u.id === studentId)) {
-        signupError.textContent = "⚠️ 이미 존재하거나 가입된 아이디/학번입니다.";
+        signupError.textContent = "⚠️ 이미 존재하거나 가입된 아이디입니다.";
         signupError.classList.remove("hidden");
         return;
       }
@@ -658,5 +642,5 @@ function setupEventListeners(state) {
 
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "🔒 담임 선생님 전용 보안 백엔드가 연결되었습니다.";
+  if (statusEl) statusEl.textContent = "🔒 담임 선생님 전용 보안 백엔드가 결합되었습니다.";
 }
