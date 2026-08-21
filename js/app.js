@@ -54,11 +54,10 @@ let currentCalYear = 2026;
 let currentCalMonth = 8;
 
 document.addEventListener("DOMContentLoaded", () => {
+  // 로컬 스토리지 데이터도 초기화하여 100% 실시간 구글 시트 / 깨끗한 상태 보장
+  localStorage.removeItem("cwgh_1_3_state");
+
   let appState = loadState();
-
-  // 기본 데모 담임 계정 제거 (박병준 선생님이 1등으로 직접 가입하실 수 있도록)
-  appState.users = appState.users.filter(u => u.role !== "admin");
-
   initApp(appState);
   startLiveClock();
   setupAuthSystem(appState);
@@ -494,7 +493,6 @@ function setupAuthSystem(state) {
     });
   }
 
-  // 👑 담임선생님 단 1명만 가입 허용하는 회원가입 로직
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -511,7 +509,6 @@ function setupAuthSystem(state) {
         return;
       }
 
-      // 🔒 담임선생님 계정 중복 검사 (단 1명만 전용 가입)
       if (role === "admin") {
         const existingAdmin = state.users.find(u => u.role === "admin");
         if (existingAdmin) {
@@ -651,6 +648,10 @@ function renderHeader(state) {
 function renderDashboardNotices(state) {
   const noticeContainer = document.getElementById("dashboard-notices");
   if (noticeContainer) {
+    if (!state.notices || state.notices.length === 0) {
+      noticeContainer.innerHTML = `<p class="text-xs text-gray-400 p-4 text-center bg-white/50 rounded-2xl">📌 아직 등록된 공지사항이 없습니다. 🌸</p>`;
+      return;
+    }
     noticeContainer.innerHTML = state.notices.map(n => `
       <div class="p-4 rounded-2xl ${n.pinned ? 'bg-pink-50 border-2 border-pink-200' : 'bg-white/60 border border-gray-100'} transition hover:shadow-md">
         <div class="flex items-center justify-between mb-1">
@@ -744,6 +745,12 @@ function renderTimetable(state) {
 function renderBirthdays(state) {
   const container = document.getElementById("birthday-list");
   if (!container) return;
+
+  if (!state.birthdays || state.birthdays.length === 0) {
+    container.innerHTML = `<p class="col-span-full text-xs text-gray-400 p-6 text-center bg-white/50 rounded-2xl">🎂 아직 등록된 생일 정보가 없습니다. 상단에서 직접 추가할 수 있습니다! 🌸</p>`;
+    return;
+  }
+
   const currentMonth = new Date().getMonth() + 1;
 
   container.innerHTML = state.birthdays.map(b => {
@@ -779,6 +786,11 @@ function renderRoles(state) {
   const container = document.getElementById("role-grid");
   if (!container) return;
 
+  if (!state.roles || state.roles.length === 0) {
+    container.innerHTML = `<p class="col-span-full text-xs text-gray-400 p-6 text-center bg-white/50 rounded-2xl">🙋‍♀️ 아직 등록된 1인 1역할 정보가 없습니다. 🌸</p>`;
+    return;
+  }
+
   container.innerHTML = state.roles.map(r => `
     <div class="p-4 bg-white/80 rounded-2xl border border-pink-100 hover:border-pink-300 transition flex items-start gap-3">
       <div class="text-3xl p-2 bg-pink-50 rounded-2xl">${r.icon || '✨'}</div>
@@ -796,6 +808,11 @@ function renderRoles(state) {
 function renderEvaluations(state) {
   const container = document.getElementById("evaluation-list");
   if (!container) return;
+
+  if (!state.evaluations || state.evaluations.length === 0) {
+    container.innerHTML = `<p class="text-xs text-gray-400 p-6 text-center bg-white/50 rounded-2xl">📝 아직 등록된 과목별 수행평가가 없습니다. 🌸</p>`;
+    return;
+  }
 
   container.innerHTML = state.evaluations.map(e => {
     const ddayInfo = getDDayString(e.deadline);
