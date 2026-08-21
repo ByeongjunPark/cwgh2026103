@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & SHA-256 로그인 시스템
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & SHA-256 회원가입/로그인 및 구글 시트 연동 엔진
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3. 실시간 시계 & D-Day 갱신
   startLiveClock();
 
-  // 4. 로그인 시스템 세팅
+  // 4. 로그인 & 회원가입 시스템 세팅
   setupAuthSystem(appState);
 
   // 5. 구글 시트 데이터 자동 동기화 시도
@@ -54,17 +54,43 @@ function initApp(state) {
   setupEventListeners(state);
 }
 
-// 🔐 SHA-256 보안 로그인 시스템 구현
+// 🔐 SHA-256 회원가입 & 로그인 시스템 구현
 function setupAuthSystem(state) {
   const modal = document.getElementById("login-modal");
   const modalBtn = document.getElementById("btn-login-modal");
   const closeBtn = document.getElementById("btn-close-login");
+  
+  const tabLogin = document.getElementById("tab-auth-login");
+  const tabSignup = document.getElementById("tab-auth-signup");
   const loginForm = document.getElementById("login-form");
+  const signupForm = document.getElementById("signup-form");
+
   const passwordInput = document.getElementById("login-password");
   const hashPreview = document.getElementById("hash-preview");
+  const signupPasswordInput = document.getElementById("signup-password");
+  const signupHashPreview = document.getElementById("signup-hash-preview");
+
   const loginError = document.getElementById("login-error");
+  const signupError = document.getElementById("signup-error");
   const userBadge = document.getElementById("user-badge");
   const addNoticeBtn = document.getElementById("btn-add-notice");
+
+  // 탭 전환 (로그인 vs 회원가입)
+  if (tabLogin && tabSignup) {
+    tabLogin.addEventListener("click", () => {
+      tabLogin.className = "flex-1 text-center font-jua text-xl text-pink-600 border-b-2 border-pink-500 pb-1 font-bold";
+      tabSignup.className = "flex-1 text-center font-jua text-xl text-gray-400 hover:text-pink-500 pb-1 font-bold";
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+    });
+
+    tabSignup.addEventListener("click", () => {
+      tabSignup.className = "flex-1 text-center font-jua text-xl text-pink-600 border-b-2 border-pink-500 pb-1 font-bold";
+      tabLogin.className = "flex-1 text-center font-jua text-xl text-gray-400 hover:text-pink-500 pb-1 font-bold";
+      signupForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+    });
+  }
 
   // 로그인 상태 배지 업데이트
   updateUserBadge();
@@ -78,7 +104,7 @@ function setupAuthSystem(state) {
       `;
       if (addNoticeBtn && isRoleAdmin) addNoticeBtn.classList.remove("hidden");
     } else {
-      userBadge.textContent = "🔑 로그인 (SHA-256)";
+      userBadge.textContent = "🔑 로그인 / ✨ 회원가입";
       if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
     }
   }
@@ -101,20 +127,31 @@ function setupAuthSystem(state) {
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
   }
 
-  // 비밀번호 입력 시 실시간 SHA-256 해시값 시각화
+  // 실시간 SHA-256 해시값 시각화 (로그인)
   if (passwordInput) {
     passwordInput.addEventListener("input", async (e) => {
       const plainText = e.target.value;
       if (!plainText) {
-        hashPreview.textContent = "비밀번호를 입력하면 해시값이 표시됩니다.";
+        hashPreview.textContent = "비밀번호를 입력하면 해시가 표시됩니다.";
         return;
       }
-      const hashHex = await hashPassword(plainText);
-      hashPreview.textContent = hashHex;
+      hashPreview.textContent = await hashPassword(plainText);
     });
   }
 
-  // 로그인 제출 검증
+  // 실시간 SHA-256 해시값 시각화 (회원가입)
+  if (signupPasswordInput) {
+    signupPasswordInput.addEventListener("input", async (e) => {
+      const plainText = e.target.value;
+      if (!plainText) {
+        signupHashPreview.textContent = "비밀번호 입력 시 암호화됩니다.";
+        return;
+      }
+      signupHashPreview.textContent = await hashPassword(plainText);
+    });
+  }
+
+  // 1. 로그인 제출 검증
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -122,11 +159,8 @@ function setupAuthSystem(state) {
 
       const username = document.getElementById("login-username").value.trim();
       const password = passwordInput.value;
-
       const inputHash = await hashPassword(password);
-      console.log(`[보안 로그] 입력 ID: ${username}, SHA-256 해시: ${inputHash}`);
 
-      // 사용자 검증 (users 배열 매칭)
       const user = state.users.find(u => u.id === username && u.passwordHash === inputHash);
 
       if (user) {
@@ -135,12 +169,57 @@ function setupAuthSystem(state) {
         updateUserBadge();
         modal.classList.add("hidden");
         loginForm.reset();
-        hashPreview.textContent = "비밀번호를 입력하면 해시값이 표시됩니다.";
-        alert(`🌸 반가워요, ${user.name}님! 로그인 성공하였습니다.`);
+        alert(`🌸 환영합니다, ${user.name} 학생! 1-3반 알림판에 로그인되었습니다.`);
       } else {
-        loginError.textContent = "❌ 학번/아이디 또는 비밀번호(해시 불일치)가 올바르지 않습니다.";
+        loginError.textContent = "❌ 학번/아이디 또는 비밀번호가 일치하지 않습니다.";
         loginError.classList.remove("hidden");
       }
+    });
+  }
+
+  // 2. ✨ 학생 회원가입 제출 처리
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      signupError.classList.add("hidden");
+
+      const studentId = document.getElementById("signup-studentid").value.trim();
+      const name = document.getElementById("signup-name").value.trim();
+      const password = signupPasswordInput.value;
+
+      if (!studentId || !name || !password) {
+        signupError.textContent = "❌ 모든 항목을 작성해 주세요.";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      // 이미 존재하는 학번 체크
+      const existingUser = state.users.find(u => u.id === studentId);
+      if (existingUser) {
+        signupError.textContent = "⚠️ 이미 가입된 학번입니다. 로그인 탭을 이용해 주세요.";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      // 비밀번호 SHA-256 암호화 생성
+      const passwordHash = await hashPassword(password);
+
+      const newUser = {
+        id: studentId,
+        name: name,
+        role: "student",
+        passwordHash: passwordHash
+      };
+
+      state.users.push(newUser);
+      state.currentUser = newUser;
+      saveState(state);
+
+      updateUserBadge();
+      modal.classList.add("hidden");
+      signupForm.reset();
+
+      alert(`🎉 1학년 3반 회원가입이 완료되었습니다!\n반가워요, ${name} 학생! 🌸`);
     });
   }
 }
@@ -202,7 +281,7 @@ function startLiveClock() {
 
 // 현재 시간 기반 교시 하이라이트
 function highlightCurrentPeriod(now) {
-  const currentDayIndex = now.getDay(); // 1=월, 5=금
+  const currentDayIndex = now.getDay();
   if (currentDayIndex < 1 || currentDayIndex > 5) return;
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -252,7 +331,6 @@ function renderHeader(state) {
 
 // 메인 대시보드 렌더링
 function renderDashboard(state) {
-  // 1. 공지사항 렌더링
   const noticeContainer = document.getElementById("dashboard-notices");
   if (noticeContainer) {
     noticeContainer.innerHTML = state.notices.map(n => `
@@ -269,7 +347,6 @@ function renderDashboard(state) {
     `).join("");
   }
 
-  // 2. D-Day 요약 렌더링
   const ddayContainer = document.getElementById("dashboard-ddays");
   if (ddayContainer) {
     const upcomingEvents = state.calendar
@@ -291,7 +368,6 @@ function renderDashboard(state) {
     `).join("");
   }
 
-  // 3. 오늘 급식 렌더링
   const mealContainer = document.getElementById("dashboard-meal");
   if (mealContainer) {
     const todayStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
@@ -517,8 +593,8 @@ async function syncWithGoogleSheet(sheetId) {
 
   const csvRows = await fetchGoogleSheetData(sheetId);
   if (csvRows && csvRows.length > 0) {
-    if (statusEl) statusEl.textContent = "✅ 구글 시트 헤더 연동 완료! 데이터를 실시간 동기화합니다.";
+    if (statusEl) statusEl.textContent = "✅ 구글 시트 연동 성공! 실시간 데이터를 동기화하였습니다.";
   } else {
-    if (statusEl) statusEl.textContent = "⚠️ 시트가 비공개 상태이거나 읽을 수 없어 기본 모드로 작동합니다. (구글시트 공유: [링크가 있는 모든 사용자-뷰어] 설정 확인)";
+    if (statusEl) statusEl.textContent = "⚠️ 시트 읽기 실패: 시트에서 [파일] ➔ [공유] ➔ [웹에 게시] 버튼을 클릭해 주시면 웹사이트에서 바로 읽어옵니다!";
   }
 }

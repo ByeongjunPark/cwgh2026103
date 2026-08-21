@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 종합알림판 데이터 & 구글 시트 & 비밀번호 SHA-256 해싱 엔진
+ * 창원여자고등학교 1학년 3반 종합알림판 데이터 & 구글 시트 & 비밀번호 SHA-256 회원가입/로그인 엔진
  */
 
 const DEFAULT_SHEET_ID = "16tH6lwRXZxxcW0vfiZxZwbYWEjbTNHsThj5J86WwbPQ";
@@ -16,9 +16,7 @@ async function hashPassword(plainText) {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// 기본 샘플 데이터 및 학생 계정 정보 (비밀번호는 SHA-256 해시값으로 저장)
-// '1033' 의 SHA-256 해시: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
-// '10301' 의 SHA-256 해시: 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
+// 기본 샘플 데이터 및 회원가입 레지스트리
 const INITIAL_DATA = {
   classInfo: {
     schoolName: "창원여자고등학교",
@@ -30,12 +28,11 @@ const INITIAL_DATA = {
       riroschool: "https://cwyeoh.riroschool.kr/home.php"
     }
   },
-  // 학생 계정 목록 (비밀번호 해시 적용)
+  // 등록된 사용자 목록 (SHA-256 해시 저장)
   users: [
-    { id: "admin", name: "담임선생님/반장", role: "admin", passwordHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" }, // 초기비번: 1033
-    { id: "10301", name: "김민서", role: "student", passwordHash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8" }, // 초기비번: 10301
-    { id: "10302", name: "박지유", role: "student", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" }, // 초기비번: 1234
-    { id: "10303", name: "이서연", role: "student", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" }
+    { id: "admin", name: "담임선생님/반장", role: "admin", passwordHash: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" }, // 비번: 1033
+    { id: "10301", name: "김민서", role: "student", passwordHash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8" }, // 비번: 10301
+    { id: "10302", name: "박지유", role: "student", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" }  // 비번: 1234
   ],
   notices: [
     {
@@ -159,19 +156,21 @@ const INITIAL_DATA = {
 };
 
 /**
- * 구글 시트 데이터 로딩 함수 (CSV 또는 GViz API)
+ * 구글 시트 다중 탭 (알림장, 수행평가, 1인1역할, 생일 등) 파서
  */
 async function fetchGoogleSheetData(sheetId) {
   try {
+    // 1. 기본 CSV 파싱
     const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
     const response = await fetch(csvUrl);
     if (!response.ok) {
       throw new Error(`Google Sheet fetch error (status ${response.status})`);
     }
     const text = await response.text();
-    return parseCSV(text);
+    const rows = parseCSV(text);
+    return rows;
   } catch (err) {
-    console.warn("구글 시트 연동 실패, 저장된 데이터나 기본 데이터를 사용합니다:", err);
+    console.warn("구글 시트 연동 실패:", err);
     return null;
   }
 }
