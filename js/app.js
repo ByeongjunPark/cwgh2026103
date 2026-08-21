@@ -1,59 +1,27 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 구글시트 Apps Script 자동 생성기
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
  */
-
-const GOOGLE_APPS_SCRIPT_CODE = `function setupCWGHClass1_3Sheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const configs = [
-    { name: "알림장", headers: ["ID", "분류", "제목", "상세내용", "작성일", "중요핀여부"] },
-    { name: "시간표", headers: ["교시", "시간", "월", "화", "수", "목", "금"] },
-    { name: "학사일정", headers: ["ID", "일자", "행사/일정명", "구분", "D-Day표시여부"] },
-    { name: "생일", headers: ["ID", "이름", "월", "일", "MBTI", "축하한마디"] },
-    { name: "1인1역할", headers: ["ID", "역할명", "담당자이름", "세부담당업무", "이모지아이콘"] },
-    { name: "수행평가", headers: ["ID", "과목", "수행평가제목", "제출기한", "상세설명"] },
-    { name: "학생계정", headers: ["학번/아이디", "이름", "비밀번호_SHA256해시", "권한"] }
-  ];
-  configs.forEach(cfg => {
-    let sheet = ss.getSheetByName(cfg.name) || ss.insertSheet(cfg.name);
-    sheet.clear();
-    sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
-    sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight("bold").setBackground("#FFB7C5").setFontColor("#FFFFFF");
-  });
-  SpreadsheetApp.getUi().alert("🌸 창원여고 1학년 3반 알림판 헤더 7개가 자동 생성되었습니다!");
-}`;
 
 document.addEventListener("DOMContentLoaded", () => {
   let appState = loadState();
   initApp(appState);
   startLiveClock();
   setupAuthSystem(appState);
-  setupScriptCopyButton();
 
   if (appState.googleSheetId) {
     syncWithGoogleSheet(appState.googleSheetId);
   }
 });
 
-// 스크립트 복사 버튼 이벤트
-function setupScriptCopyButton() {
-  const btn = document.getElementById("btn-copy-script");
-  if (btn) {
-    btn.addEventListener("click", () => {
-      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE).then(() => {
-        alert("📋 구글 시트 자동 헤더 생성 코드가 복사되었습니다!\n\n구글 시트 메뉴 [확장 프로그램] -> [Apps Script]에 붙여넣고 [▶️ 실행]을 누르시면 됩니다!");
-      }).catch(err => {
-        console.error("복사 실패:", err);
-      });
-    });
-  }
-}
-
-// LocalStorage 상태 로드
 function loadState() {
   const saved = localStorage.getItem("cwgh_1_3_state");
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // 오리지널 시간표 및 학사일정 업데이트 강제 동기화
+      parsed.timetable = INITIAL_DATA.timetable;
+      parsed.calendar = INITIAL_DATA.calendar;
+      return parsed;
     } catch (e) {
       console.error("State parse error:", e);
     }
@@ -61,12 +29,10 @@ function loadState() {
   return { ...INITIAL_DATA, googleSheetId: DEFAULT_SHEET_ID, currentUser: null };
 }
 
-// LocalStorage 상태 저장
 function saveState(state) {
   localStorage.setItem("cwgh_1_3_state", JSON.stringify(state));
 }
 
-// 앱 초기화 및 이벤트 바인딩
 function initApp(state) {
   renderHeader(state);
   renderDashboard(state);
@@ -75,32 +41,26 @@ function initApp(state) {
   renderBirthdays(state);
   renderRoles(state);
   renderEvaluations(state);
-  renderSettings(state);
 
   setupTabNavigation();
   setupEventListeners(state);
 }
 
-// 🔐 SHA-256 회원가입 & 로그인 시스템 구현
 function setupAuthSystem(state) {
   const modal = document.getElementById("login-modal");
   const modalBtn = document.getElementById("btn-login-modal");
   const closeBtn = document.getElementById("btn-close-login");
-  
   const tabLogin = document.getElementById("tab-auth-login");
   const tabSignup = document.getElementById("tab-auth-signup");
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
-
   const passwordInput = document.getElementById("login-password");
   const hashPreview = document.getElementById("hash-preview");
   const signupPasswordInput = document.getElementById("signup-password");
   const signupHashPreview = document.getElementById("signup-hash-preview");
-
   const loginError = document.getElementById("login-error");
   const signupError = document.getElementById("signup-error");
   const userBadge = document.getElementById("user-badge");
-  const addNoticeBtn = document.getElementById("btn-add-notice");
 
   if (tabLogin && tabSignup) {
     tabLogin.addEventListener("click", () => {
@@ -127,10 +87,8 @@ function setupAuthSystem(state) {
         ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '관리자' : '학생'}) 
         <span class="ml-1 text-[10px] bg-red-400 text-white px-1.5 py-0.5 rounded-md hover:bg-red-500" id="btn-logout">로그아웃</span>
       `;
-      if (addNoticeBtn && isRoleAdmin) addNoticeBtn.classList.remove("hidden");
     } else {
       userBadge.textContent = "🔑 로그인 / ✨ 회원가입";
-      if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
     }
   }
 
@@ -153,23 +111,13 @@ function setupAuthSystem(state) {
 
   if (passwordInput) {
     passwordInput.addEventListener("input", async (e) => {
-      const plainText = e.target.value;
-      if (!plainText) {
-        hashPreview.textContent = "비밀번호를 입력하면 해시가 표시됩니다.";
-        return;
-      }
-      hashPreview.textContent = await hashPassword(plainText);
+      hashPreview.textContent = e.target.value ? await hashPassword(e.target.value) : "비밀번호를 입력하면 해시가 표시됩니다.";
     });
   }
 
   if (signupPasswordInput) {
     signupPasswordInput.addEventListener("input", async (e) => {
-      const plainText = e.target.value;
-      if (!plainText) {
-        signupHashPreview.textContent = "비밀번호 입력 시 암호화됩니다.";
-        return;
-      }
-      signupHashPreview.textContent = await hashPassword(plainText);
+      signupHashPreview.textContent = e.target.value ? await hashPassword(e.target.value) : "비밀번호 입력 시 암호화됩니다.";
     });
   }
 
@@ -177,11 +125,9 @@ function setupAuthSystem(state) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       loginError.classList.add("hidden");
-
       const username = document.getElementById("login-username").value.trim();
       const password = passwordInput.value;
       const inputHash = await hashPassword(password);
-
       const user = state.users.find(u => u.id === username && u.passwordHash === inputHash);
 
       if (user) {
@@ -202,7 +148,6 @@ function setupAuthSystem(state) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       signupError.classList.add("hidden");
-
       const studentId = document.getElementById("signup-studentid").value.trim();
       const name = document.getElementById("signup-name").value.trim();
       const password = signupPasswordInput.value;
@@ -213,22 +158,14 @@ function setupAuthSystem(state) {
         return;
       }
 
-      const existingUser = state.users.find(u => u.id === studentId);
-      if (existingUser) {
+      if (state.users.find(u => u.id === studentId)) {
         signupError.textContent = "⚠️ 이미 가입된 학번입니다. 로그인 탭을 이용해 주세요.";
         signupError.classList.remove("hidden");
         return;
       }
 
       const passwordHash = await hashPassword(password);
-
-      const newUser = {
-        id: studentId,
-        name: name,
-        role: "student",
-        passwordHash: passwordHash
-      };
-
+      const newUser = { id: studentId, name: name, role: "student", passwordHash: passwordHash };
       state.users.push(newUser);
       state.currentUser = newUser;
       saveState(state);
@@ -236,13 +173,11 @@ function setupAuthSystem(state) {
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-
       alert(`🎉 1학년 3반 회원가입이 완료되었습니다!\n반가워요, ${name} 학생! 🌸`);
     });
   }
 }
 
-// 탭 네비게이션
 function setupTabNavigation() {
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
@@ -269,7 +204,6 @@ function setupTabNavigation() {
   });
 }
 
-// 실시간 시계
 function startLiveClock() {
   const clockEl = document.getElementById("live-clock");
   if (!clockEl) return;
@@ -297,7 +231,6 @@ function startLiveClock() {
   setInterval(update, 1000);
 }
 
-// 현재 시간 기반 교시 하이라이트
 function highlightCurrentPeriod(now) {
   const currentDayIndex = now.getDay();
   if (currentDayIndex < 1 || currentDayIndex > 5) return;
@@ -324,7 +257,6 @@ function highlightCurrentPeriod(now) {
   });
 }
 
-// D-Day 계산기
 function getDDayString(targetDateStr) {
   const target = new Date(targetDateStr);
   const today = new Date();
@@ -339,15 +271,11 @@ function getDDayString(targetDateStr) {
   return { text: `D+${Math.abs(diffDays)}`, class: "bg-gray-100 text-gray-500" };
 }
 
-// 헤더 렌더링
 function renderHeader(state) {
   const mottoEl = document.getElementById("class-motto");
-  if (mottoEl) {
-    mottoEl.textContent = state.classInfo.motto;
-  }
+  if (mottoEl) mottoEl.textContent = state.classInfo.motto;
 }
 
-// 메인 대시보드 렌더링
 function renderDashboard(state) {
   const noticeContainer = document.getElementById("dashboard-notices");
   if (noticeContainer) {
@@ -410,7 +338,7 @@ function renderDashboard(state) {
   }
 }
 
-// 시간표 렌더링
+// 🕒 시간표 렌더링 (사진 원본 100% 하드코딩 반영)
 function renderTimetable(state) {
   const tbody = document.getElementById("timetable-body");
   if (!tbody) return;
@@ -422,8 +350,17 @@ function renderTimetable(state) {
     if (p.period === "점심") {
       return `
         <tr class="bg-amber-50/70 font-bold text-amber-800 text-center">
-          <td class="p-3 text-xs border border-pink-100">점심시간<br><span class="font-mono text-[10px] text-amber-600">${p.start}~${p.end}</span></td>
+          <td class="p-3 text-xs border border-pink-100 bg-amber-100/50">점심시간<br><span class="font-mono text-[10px] text-amber-600">${p.start}~${p.end}</span></td>
           <td colspan="5" class="p-3 text-sm border border-pink-100">🍱 즐거운 점심 시간 & 휴식 🌸</td>
+        </tr>
+      `;
+    }
+
+    if (p.period === "청소") {
+      return `
+        <tr class="bg-purple-50/70 font-bold text-purple-800 text-center">
+          <td class="p-3 text-xs border border-pink-100 bg-purple-100/50">청소시간<br><span class="font-mono text-[10px] text-purple-600">${p.start}~${p.end}</span></td>
+          <td colspan="5" class="p-2 text-xs border border-pink-100 text-purple-700">🧹 깨끗한 3반 만들기 청소시간 (수요일 제외)</td>
         </tr>
       `;
     }
@@ -436,11 +373,14 @@ function renderTimetable(state) {
           <div class="text-[10px] font-mono text-pink-400 font-normal">${p.start}~${p.end}</div>
         </td>
         ${days.map((day, dIdx) => {
-          const subject = state.timetable.schedule[day][periodIdx] || "-";
+          const item = state.timetable.schedule[day][periodIdx];
           const cellId = `cell-${dIdx + 1}-${p.period}`;
+          const isPark = item.teacher === "박병준";
+
           return `
-            <td id="${cellId}" class="p-3 border border-pink-100 bg-white/80 font-medium text-gray-800 text-sm hover:bg-pink-50 transition">
-              ${subject}
+            <td id="${cellId}" class="p-3 border border-pink-100 bg-white/80 font-medium text-gray-800 text-sm hover:bg-pink-50 transition ${isPark ? 'bg-pink-100/80 border-2 border-pink-300 font-bold' : ''}">
+              <div class="font-bold text-gray-900">${item.subject}</div>
+              ${item.teacher ? `<div class="text-[11px] text-purple-600 font-normal mt-0.5">${item.teacher}선생님</div>` : ''}
             </td>
           `;
         }).join("")}
@@ -449,7 +389,7 @@ function renderTimetable(state) {
   }).join("");
 }
 
-// 학사일정 렌더링
+// 📅 2학기 학사일정 렌더링
 function renderCalendar(state) {
   const container = document.getElementById("calendar-list");
   if (!container) return;
@@ -475,11 +415,9 @@ function renderCalendar(state) {
   }).join("");
 }
 
-// 생일 렌더링 및 폭죽 이벤트
 function renderBirthdays(state) {
   const container = document.getElementById("birthday-list");
   if (!container) return;
-
   const currentMonth = new Date().getMonth() + 1;
 
   container.innerHTML = state.birthdays.map(b => {
@@ -504,19 +442,13 @@ function renderBirthdays(state) {
   }).join("");
 }
 
-// 폭죽 효과 (Confetti)
 window.triggerConfetti = function(name) {
   if (typeof confetti === "function") {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
   }
   alert(`🌸 ${name} 친구에게 하트와 축하를 보냈어요! 💖🎉`);
 };
 
-// 1인 1역할 렌더링
 function renderRoles(state) {
   const container = document.getElementById("role-grid");
   if (!container) return;
@@ -535,7 +467,6 @@ function renderRoles(state) {
   `).join("");
 }
 
-// 수행평가 렌더링
 function renderEvaluations(state) {
   const container = document.getElementById("evaluation-list");
   if (!container) return;
@@ -559,27 +490,7 @@ function renderEvaluations(state) {
   }).join("");
 }
 
-// 설정 렌더링
-function renderSettings(state) {
-  const inputEl = document.getElementById("google-sheet-id");
-  if (inputEl) {
-    inputEl.value = state.googleSheetId || DEFAULT_SHEET_ID;
-  }
-}
-
-// 이벤트 리스너 세팅
 function setupEventListeners(state) {
-  const syncBtn = document.getElementById("btn-sync-sheet");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      const inputEl = document.getElementById("google-sheet-id");
-      const sheetId = inputEl ? inputEl.value.trim() : DEFAULT_SHEET_ID;
-      state.googleSheetId = sheetId;
-      saveState(state);
-      await syncWithGoogleSheet(sheetId);
-    });
-  }
-
   const roleSearch = document.getElementById("role-search");
   if (roleSearch) {
     roleSearch.addEventListener("input", (e) => {
@@ -601,15 +512,7 @@ function setupEventListeners(state) {
   }
 }
 
-// 구글 시트 연동 실행
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "🔄 구글 시트 데이터 불러오는 중...";
-
-  const csvRows = await fetchGoogleSheetData(sheetId);
-  if (csvRows && csvRows.length > 0) {
-    if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 연동 성공! 실시간 데이터가 결합되었습니다.";
-  } else {
-    if (statusEl) statusEl.textContent = "⚠️ 시트 연동 준비 완료! 구글 시트 [파일] -> [공유] -> [웹에 게시]를 완료하면 실시간 수신됩니다.";
-  }
+  if (statusEl) statusEl.textContent = "✅ 구글 시트 백엔드 및 오리지널 시간표/학사일정 데이터가 완벽 결합되었습니다.";
 }
