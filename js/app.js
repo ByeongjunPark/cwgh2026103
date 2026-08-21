@@ -1,5 +1,5 @@
 /**
- * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱 & 학생/교사 회원가입 엔진
+ * 창원여자고등학교 1학년 3반 메인 컨트롤러 앱
  */
 
 const GOOGLE_APPS_SCRIPT_CODE = `// 🌸 창원여고 1-3반 알림판 2-Way 양방향 구글 시트 백엔드 스크립트
@@ -120,6 +120,10 @@ function setupAuthSystem(state) {
   const signupError = document.getElementById("signup-error");
   const userBadge = document.getElementById("user-badge");
 
+  const adminTabBtn = document.getElementById("admin-tab-btn");
+  const adminSheetLink = document.getElementById("admin-sheet-link");
+  const addNoticeBtn = document.getElementById("btn-add-notice");
+
   if (signupRoleSelect && adminCodeBox) {
     signupRoleSelect.addEventListener("change", (e) => {
       if (e.target.value === "admin") {
@@ -148,6 +152,7 @@ function setupAuthSystem(state) {
 
   updateUserBadge();
 
+  // 🔒 오직 박병준 선생님/담임교사 로그인 시에만 구글 시트 및 백엔드 설정 노출!
   function updateUserBadge() {
     if (state.currentUser) {
       const isRoleAdmin = state.currentUser.role === "admin";
@@ -155,8 +160,21 @@ function setupAuthSystem(state) {
         ${isRoleAdmin ? '👑' : '🌸'} ${state.currentUser.name} (${isRoleAdmin ? '선생님/관리자' : '학생'}) 
         <span class="ml-1 text-[10px] bg-red-400 text-white px-1.5 py-0.5 rounded-md hover:bg-red-500" id="btn-logout">로그아웃</span>
       `;
+
+      if (isRoleAdmin) {
+        if (adminTabBtn) adminTabBtn.classList.remove("hidden");
+        if (adminSheetLink) adminSheetLink.classList.remove("hidden");
+        if (addNoticeBtn) addNoticeBtn.classList.remove("hidden");
+      } else {
+        if (adminTabBtn) adminTabBtn.classList.add("hidden");
+        if (adminSheetLink) adminSheetLink.classList.add("hidden");
+        if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
+      }
     } else {
       userBadge.textContent = "🔑 로그인 / ✨ 회원가입";
+      if (adminTabBtn) adminTabBtn.classList.add("hidden");
+      if (adminSheetLink) adminSheetLink.classList.add("hidden");
+      if (addNoticeBtn) addNoticeBtn.classList.add("hidden");
     }
   }
 
@@ -212,7 +230,7 @@ function setupAuthSystem(state) {
     });
   }
 
-  // ✨ 학생 & 교사 회원가입 제출 처리
+  // ✨ 직접 회원가입 처리 (선생님 & 학생)
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -230,15 +248,14 @@ function setupAuthSystem(state) {
         return;
       }
 
-      // 선생님/관리자 가입 코드 체크 (1033)
       if (role === "admin" && adminCode !== "1033") {
-        signupError.textContent = "❌ 교사/관리자 인증 암호가 올바르지 않습니다. (기본: 1033)";
+        signupError.textContent = "❌ 선생님/관리자 인증 암호가 올바르지 않습니다. (기본: 1033)";
         signupError.classList.remove("hidden");
         return;
       }
 
       if (state.users.find(u => u.id === studentId)) {
-        signupError.textContent = "⚠️ 이미 존재하 가입된 아이디/학번입니다.";
+        signupError.textContent = "⚠️ 이미 존재하거나 가입된 아이디/학번입니다.";
         signupError.classList.remove("hidden");
         return;
       }
@@ -261,7 +278,7 @@ function setupAuthSystem(state) {
       updateUserBadge();
       modal.classList.add("hidden");
       signupForm.reset();
-      alert(`🎉 ${role === 'admin' ? '선생님/관리자' : '학생'} 회원가입이 성공적으로 완료되었습니다!\n구글 시트 백엔드 [학생계정] 탭으로 자동 저장되었습니다. 🌸`);
+      alert(`🎉 ${role === 'admin' ? '담임 선생님(박병준 선생님)' : '학생'} 회원가입이 완료되었습니다!\n구글 시트 백엔드로 자동 등록되었습니다. 🌸`);
     });
   }
 }
@@ -641,5 +658,5 @@ function setupEventListeners(state) {
 
 async function syncWithGoogleSheet(sheetId) {
   const statusEl = document.getElementById("sheet-sync-status");
-  if (statusEl) statusEl.textContent = "✅ 웹 ➔ 구글 시트 2-Way 양방향 백엔드 연동 켜짐";
+  if (statusEl) statusEl.textContent = "🔒 담임 선생님 전용 보안 백엔드가 연결되었습니다.";
 }
